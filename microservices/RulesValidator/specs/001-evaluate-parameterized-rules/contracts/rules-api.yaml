@@ -1,0 +1,172 @@
+openapi: 3.0.3
+info:
+  title: API Validador de Reglas
+  version: 1.0.0
+servers:
+  - url: /api/v1
+paths:
+  /evaluaciones-reglas:
+    post:
+      summary: Evaluar reglas de negocio
+      operationId: evaluarReglas
+      parameters:
+        - name: X-Correlation-ID
+          in: header
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SolicitudEvaluacionReglas'
+      responses:
+        '200':
+          description: Evaluación procesada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespuestaEvaluacionReglas'
+        '400':
+          description: Solicitud inválida.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/DetalleProblema'
+        '404':
+          description: No existe configuración aplicable.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/DetalleProblema'
+        '422':
+          description: Solicitud no procesable.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/DetalleProblema'
+        '500':
+          description: Error interno controlado.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/DetalleProblema'
+components:
+  schemas:
+    SolicitudEvaluacionReglas:
+      type: object
+      additionalProperties: false
+      required: [negocio, proceso, etapa, contexto]
+      properties:
+        negocio:
+          type: string
+          maxLength: 50
+          example: PENSIONADOS
+        proceso:
+          type: string
+          maxLength: 100
+          example: VINCULACION
+        etapa:
+          type: integer
+          format: int32
+          minimum: 1
+          example: 4
+        fechaEvaluacion:
+          type: string
+          format: date-time
+          description: Fecha opcional ISO 8601 UTC. Si falta se usa el reloj UTC del servicio.
+          example: '2026-11-18T23:00:00Z'
+        contexto:
+          type: object
+          additionalProperties: true
+          example:
+            pension:
+              tipo: Vejez
+              mesadaEnSmlmv: 1.4
+            plan:
+              codigo: TP-01
+    RespuestaEvaluacionReglas:
+      type: object
+      required: [idEvaluacion, idCorrelacion, duracionMs, resultadoGeneral, flujosReglas, resultados]
+      properties:
+        idEvaluacion:
+          type: string
+          format: uuid
+        idCorrelacion:
+          type: string
+        duracionMs:
+          type: integer
+          format: int64
+          minimum: 0
+        resultadoGeneral:
+          $ref: '#/components/schemas/EstadoEvaluacionGeneral'
+        flujosReglas:
+          type: array
+          items:
+            type: string
+        resultados:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResultadoEvaluacionRegla'
+    ResultadoEvaluacionRegla:
+      type: object
+      required: [codigoRegla, version, estado, severidad]
+      properties:
+        codigoRegla:
+          type: string
+        version:
+          type: integer
+          minimum: 1
+        estado:
+          $ref: '#/components/schemas/EstadoEvaluacionRegla'
+        severidad:
+          $ref: '#/components/schemas/SeveridadRegla'
+        codigoError:
+          type: string
+          nullable: true
+        mensaje:
+          type: string
+          nullable: true
+    EstadoEvaluacionRegla:
+      type: string
+      enum: [CUMPLE, NO_CUMPLE, NO_APLICA, INDETERMINADO]
+    EstadoEvaluacionGeneral:
+      type: string
+      enum: [CUMPLE, NO_CUMPLE, INDETERMINADO]
+    SeveridadRegla:
+      type: string
+      enum: [INFORMATIVA, ADVERTENCIA, BLOQUEANTE]
+    DetalleProblema:
+      type: object
+      required: [type, title, status, detail, instance, idTraza, idCorrelacion]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        idTraza:
+          type: string
+        idCorrelacion:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            required: [codigo, mensaje]
+            properties:
+              codigo:
+                type: string
+              mensaje:
+                type: string
+              campo:
+                type: string
+                nullable: true
