@@ -43,3 +43,11 @@ Los límites de inicio y fin son inclusivos. `fecha_fin_vigencia = NULL` signifi
 ## C-010 Regla inválida
 
 Una definición ACTIVA inválida es error de configuración, no INDETERMINADO. Retorna HTTP 500 controlado.
+
+## C-011 Aplicabilidad explícita
+
+`RuleDefinition 1.0` admite un nodo opcional `aplicabilidad` en la raíz, con la misma estructura neutral de condición o grupo. La aplicabilidad se evalúa antes de la condición principal: falsa produce `NO_APLICA`; si falta un campo requerido para decidirla, produce `INDETERMINADO` / `DATOS_INSUFICIENTES`. Si es verdadera, se evalúa la condición principal.
+
+## C-012 Tipos incompatibles en contexto
+
+Un campo conocido de `contexto` presente con un tipo JSON incompatible se retorna como HTTP 422 ProblemDetails con `errors[].codigo = CONTEXTO_TIPO_INVALIDO` y `errors[].campo` con la ruta del campo. Si el campo está ausente o es `null`, se aplica C-007: la regla que lo requiera retorna `INDETERMINADO`.

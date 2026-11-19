@@ -1,0 +1,22 @@
+@baseUrl = http://localhost:5190
+
+### Evaluar reglas parametrizables
+POST {{baseUrl}}/api/v1/evaluaciones-reglas
+Content-Type: application/json
+X-Correlation-ID: prueba-rules-validator-001
+
+{
+  "negocio": "PENSIONADOS",
+  "proceso": "VINCULACION",
+  "etapa": 4,
+  "fechaEvaluacion": "2026-11-18T23:00:00Z",
+  "contexto": {
+    "pension": {
+      "tipo": "Vejez",
+      "mesadaEnSmlmv": 1.4
+    },
+    "plan": {
+      "codigo": "TP-01"
+    }
+  }
+}

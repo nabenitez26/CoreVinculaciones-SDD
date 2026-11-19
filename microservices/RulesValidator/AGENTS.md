@@ -66,3 +66,48 @@ No convertir restricciones de integridad de base de datos en reglas parametrizad
 - Documentación funcional: español.
 - Mensajes funcionales: español.
 - Identificadores técnicos de reglas: conservar nomenclatura oficial, por ejemplo RV-001.
+
+## Política de ejecución de pruebas
+
+Durante la implementación incremental, GitHub Copilot NO debe
+ejecutar automáticamente proyectos de pruebas.
+
+No ejecutar de forma automática:
+
+- dotnet test
+- tests unitarios
+- tests de integración
+- Architecture Tests
+- Contract Tests
+- Security Tests
+- cobertura de código
+- suites completas de regresión
+
+Los proyectos de pruebas deben mantenerse y podrán ser modificados
+cuando la tarea activa lo requiera, pero no deberán ejecutarse
+automáticamente.
+
+Durante las tareas de implementación se permite ejecutar únicamente:
+
+dotnet restore
+dotnet build
+
+y únicamente cuando sea necesario validar compilación.
+
+Las pruebas se ejecutarán solamente cuando:
+
+1. una tarea solicite explícitamente ejecutar pruebas;
+2. el usuario solicite explícitamente ejecutar pruebas;
+3. se alcance el gate final de validación de la Feature.
+
+Copilot no debe ejecutar pruebas como paso adicional para
+"verificar", "asegurar", "validar" o "confirmar" una implementación
+si la tarea activa no lo exige explícitamente.
+
+Al terminar cada tarea debe:
+
+1. indicar los archivos modificados;
+2. indicar si la compilación fue ejecutada;
+3. indicar qué pruebas corresponderían a la tarea;
+4. NO ejecutar dichas pruebas;
+5. detenerse

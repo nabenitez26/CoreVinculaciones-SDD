@@ -18,4 +18,9 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\RulesValidator.Application\RulesValidator.Application.csproj" />
+    <ProjectReference Include="..\..\RulesValidator.Domain\RulesValidator.Domain.csproj" />
+  </ItemGroup>
+
 </Project>

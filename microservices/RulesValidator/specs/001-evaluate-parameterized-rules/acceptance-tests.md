@@ -30,6 +30,8 @@
 | TP-01 | ausente | INDETERMINADO | BLOQUEANTE | DATOS_INSUFICIENTES | No existe información suficiente para evaluar RV-002. |
 | ausente | 1.40 | INDETERMINADO | BLOQUEANTE | DATOS_INSUFICIENTES | No existe información suficiente para evaluar RV-002. |
 
+La definición de RV-002 expresa `plan.codigo = TP-01` en el nodo raíz opcional `aplicabilidad`; el tope de mesada permanece en la condición principal. Si la aplicabilidad es falsa, la condición principal no se ejecuta.
+
 ## 4. Consolidación
 
 - Una regla BLOQUEANTE NO_CUMPLE -> resultadoGeneral NO_CUMPLE.
@@ -56,6 +58,9 @@ Dado negocio PENSIONADOS, proceso VINCULACION y etapa 4, se recuperan primero re
 
 - Ruta única: POST /api/v1/evaluaciones-reglas.
 - Faltan negocio, proceso, etapa o contexto -> 400 ProblemDetails.
+- JSON malformado, propiedad superior desconocida o X-Correlation-ID de más de 100 caracteres -> 400 ProblemDetails.
+- Un campo conocido de contexto presente con tipo incompatible -> 422 ProblemDetails con `errors[].codigo = CONTEXTO_TIPO_INVALIDO` y `errors[].campo`.
+- Un campo requerido por una regla ausente o `null` -> HTTP 200 y resultado individual INDETERMINADO.
 - No existe flujo GLOBAL ni específico aplicable -> 404 ProblemDetails.
 - Request técnicamente no procesable -> 422 ProblemDetails.
 - Definición ACTIVA inválida -> 500 ProblemDetails sin filtrar definición, SQL o stack trace.

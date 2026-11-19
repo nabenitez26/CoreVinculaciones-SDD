@@ -13,9 +13,6 @@
           "type": "number"
         },
         {
-          "type": "integer"
-        },
-        {
           "type": "boolean"
         },
         {
@@ -29,9 +26,6 @@
               },
               {
                 "type": "number"
-              },
-              {
-                "type": "integer"
               },
               {
                 "type": "boolean"
@@ -111,6 +105,16 @@
         }
       }
     },
+    "nodo": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/condicion"
+        },
+        {
+          "$ref": "#/$defs/grupo"
+        }
+      ]
+    },
     "nodoRaiz": {
       "oneOf": [
         {
@@ -147,6 +151,9 @@
                 "NO_EN"
               ]
             },
+            "aplicabilidad": {
+              "$ref": "#/$defs/nodo"
+            },
             "valor": {
               "$ref": "#/$defs/valor"
             }
@@ -173,6 +180,9 @@
                 "Y",
                 "O"
               ]
+            },
+            "aplicabilidad": {
+              "$ref": "#/$defs/nodo"
             },
             "condiciones": {
               "type": "array",

@@ -66,6 +66,8 @@ No se ejecutan versiones BORRADOR, EN_REVISION, APROBADA, INACTIVA, futuras o ve
 
 Azure SQL almacena `definicion_json` conforme a `RuleDefinition 1.0`.
 
+La raíz puede incluir opcionalmente `aplicabilidad`, como condición o grupo neutral con la misma estructura de nodos. Se evalúa antes de la condición principal. Si resulta falsa, la regla retorna `NO_APLICA`; si falta un campo requerido para evaluarla, retorna `INDETERMINADO` con `DATOS_INSUFICIENTES`.
+
 No almacena:
 
 - Workflow o Rule de Microsoft RulesEngine;
@@ -125,6 +127,8 @@ Severidad: BLOQUEANTE
 Código: `ERR-MESADA-TP01`
 
 Si `plan.codigo` no es TP-01, RV-002 retorna `NO_APLICA`.
+
+Su definición neutral utiliza `aplicabilidad` para `plan.codigo = TP-01` y la condición principal para el tope de mesada. La condición principal no se evalúa cuando la regla no aplica.
 
 ## 10. Definición activa inválida
 
