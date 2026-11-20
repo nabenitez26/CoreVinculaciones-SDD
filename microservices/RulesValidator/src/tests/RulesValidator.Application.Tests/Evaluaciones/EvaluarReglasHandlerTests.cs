@@ -12,7 +12,7 @@ internal sealed class RepositorioReglasFalso(IReadOnlyList<FlujoReglas> flujos) 
     public DateTime? FechaRecibida { get; private set; }
 
     public Task<IReadOnlyList<FlujoReglas>> ObtenerFlujosAplicablesAsync(
-        string negocio, string proceso, int etapa, DateTime fechaEvaluacion, CancellationToken cancellationToken)
+        string negocio, string proceso, string? tipoPlanId, int etapa, DateTime fechaEvaluacion, CancellationToken cancellationToken)
     {
         FechaRecibida = fechaEvaluacion;
         return Task.FromResult(flujos);
@@ -30,9 +30,45 @@ internal sealed class RepositorioEjecucionesFalso : IRepositorioEjecucionesRegla
     }
 }
 
+internal sealed class RepositorioCatalogoCamposFalso : IRepositorioCatalogoCampos
+{
+    public Task<IReadOnlyList<CampoReglaPermitido>> ObtenerCamposActivosAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<CampoReglaPermitido>>(
+        [
+            new("pension.tipo", TipoValorCampo.Texto, new HashSet<OperadorComparacion>
+            {
+                OperadorComparacion.Igual,
+                OperadorComparacion.Diferente,
+                OperadorComparacion.En,
+                OperadorComparacion.NoEn
+            }),
+            new("pension.mesadaEnSmlmv", TipoValorCampo.Numero, new HashSet<OperadorComparacion>
+            {
+                OperadorComparacion.Igual,
+                OperadorComparacion.Diferente,
+                OperadorComparacion.Mayor,
+                OperadorComparacion.MayorIgual,
+                OperadorComparacion.Menor,
+                OperadorComparacion.MenorIgual,
+                OperadorComparacion.En,
+                OperadorComparacion.NoEn
+            }),
+            new("plan.codigo", TipoValorCampo.Texto, new HashSet<OperadorComparacion>
+            {
+                OperadorComparacion.Igual,
+                OperadorComparacion.Diferente,
+                OperadorComparacion.En,
+                OperadorComparacion.NoEn
+            })
+        ]);
+}
+
 internal sealed class ValidadorFalso(Func<string, ResultadoValidacionDefinicion> validar) : IValidadorDefinicionRegla
 {
-    public ResultadoValidacionDefinicion Validar(string definicionJson) => validar(definicionJson);
+    public Task<ResultadoValidacionDefinicion> ValidarAsync(
+        string definicionJson,
+        IReadOnlyList<CampoReglaPermitido> camposPermitidos,
+        CancellationToken cancellationToken) => Task.FromResult(validar(definicionJson));
 }
 
 internal sealed class MotorFalso(Func<IReadOnlyList<ReglaPorEvaluar>, IReadOnlyList<ResultadoEvaluacionRegla>> evaluar) : IMotorReglas
@@ -40,7 +76,10 @@ internal sealed class MotorFalso(Func<IReadOnlyList<ReglaPorEvaluar>, IReadOnlyL
     public List<IReadOnlyList<ReglaPorEvaluar>> Invocaciones { get; } = [];
 
     public Task<IReadOnlyList<ResultadoEvaluacionRegla>> EvaluarAsync(
-        IReadOnlyList<ReglaPorEvaluar> reglas, JsonElement contexto, CancellationToken cancellationToken)
+        IReadOnlyList<ReglaPorEvaluar> reglas,
+        JsonElement contexto,
+        IReadOnlyList<CampoReglaPermitido> camposPermitidos,
+        CancellationToken cancellationToken)
     {
         Invocaciones.Add(reglas);
         return Task.FromResult(evaluar(reglas));
@@ -128,7 +167,7 @@ public sealed class EvaluarReglasHandlerTests
         var motor = CrearMotor();
         var validador = new ValidadorFalso(json =>
             json == "invalida" ? ResultadoValidacionDefinicion.Invalida(["error"]) : ResultadoValidacionDefinicion.Valida(DefinicionValida));
-        var handler = new EvaluarReglasHandler(repositorio, _ejecuciones, validador, motor);
+        var handler = new EvaluarReglasHandler(repositorio, _ejecuciones, new RepositorioCatalogoCamposFalso(), validador, motor);
 
         var ex = await Assert.ThrowsAsync<DefinicionReglaInvalidaException>(
             () => handler.HandleAsync(Comando(), CancellationToken.None));
@@ -193,6 +232,7 @@ public sealed class EvaluarReglasHandlerTests
         var handler = new EvaluarReglasHandler(
             new RepositorioReglasFalso(flujos),
             _ejecuciones,
+            new RepositorioCatalogoCamposFalso(),
             new ValidadorFalso(_ => ResultadoValidacionDefinicion.Valida(DefinicionValida)),
             motor);
 
@@ -200,7 +240,7 @@ public sealed class EvaluarReglasHandlerTests
     }
 
     private EvaluarReglasHandler CrearHandler(RepositorioReglasFalso repositorio) =>
-        new(repositorio, _ejecuciones,
+        new(repositorio, _ejecuciones, new RepositorioCatalogoCamposFalso(),
             new ValidadorFalso(_ => ResultadoValidacionDefinicion.Valida(DefinicionValida)),
             CrearMotor());
 
@@ -209,7 +249,7 @@ public sealed class EvaluarReglasHandlerTests
             r.CodigoRegla, r.Version, EstadoEvaluacionRegla.Cumple, r.Severidad, null, null)).ToList()));
 
     private static EvaluarReglasCommand Comando(DateTimeOffset? fecha = null, string correlacion = "corr-1") =>
-        new("PENSIONADOS", "VINCULACION", 4, fecha, JsonDocument.Parse("{}").RootElement, correlacion);
+        new("PENSIONADOS", "VINCULACION", "PENSIONADO", 4, fecha, JsonDocument.Parse("{}").RootElement, correlacion);
 
     private static FlujoReglas Flujo(string codigo, params Regla[] reglas) =>
         new(1, codigo, codigo, "VINCULACION", 4, 0, true, reglas);

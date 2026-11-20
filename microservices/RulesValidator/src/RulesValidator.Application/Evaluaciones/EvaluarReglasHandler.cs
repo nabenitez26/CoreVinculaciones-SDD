@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using RulesValidator.Application.Abstracciones;
 using RulesValidator.Application.Observabilidad;
@@ -10,6 +11,7 @@ namespace RulesValidator.Application.Evaluaciones;
 public sealed class EvaluarReglasHandler(
     IRepositorioReglas repositorioReglas,
     IRepositorioEjecucionesReglas repositorioEjecuciones,
+    IRepositorioCatalogoCampos repositorioCatalogoCampos,
     IValidadorDefinicionRegla validador,
     IMotorReglas motor,
     ILogger<EvaluarReglasHandler>? logger = null)
@@ -36,17 +38,24 @@ public sealed class EvaluarReglasHandler(
         var fechaEvaluacion = command.FechaEvaluacion?.UtcDateTime ?? fechaEjecucion;
 
         var flujos = await repositorioReglas.ObtenerFlujosAplicablesAsync(
-            command.Negocio, command.Proceso, command.Etapa, fechaEvaluacion, cancellationToken);
+            command.Negocio, command.Proceso, command.TipoPlanId, command.Etapa, fechaEvaluacion, cancellationToken);
 
         if (flujos.Count == 0)
         {
             throw new ConfiguracionReglasNoEncontradaException(command.Negocio, command.Proceso, command.Etapa);
         }
 
-        // Todas las definiciones se validan antes de invocar al motor.
-        var reglasPorEvaluar = PrepararReglas(flujos);
+        var camposPermitidos = await repositorioCatalogoCampos.ObtenerCamposActivosAsync(cancellationToken);
+        var camposContextoInvalidos = ValidarTiposContexto(command.Contexto, camposPermitidos);
+        if (camposContextoInvalidos.Count > 0)
+        {
+            throw new ContextoNoProcesableException(camposContextoInvalidos);
+        }
 
-        var resultados = await motor.EvaluarAsync(reglasPorEvaluar, command.Contexto, cancellationToken);
+        // Todas las definiciones se validan antes de invocar al motor.
+        var reglasPorEvaluar = await PrepararReglasAsync(flujos, camposPermitidos, cancellationToken);
+
+        var resultados = await motor.EvaluarAsync(reglasPorEvaluar, command.Contexto, camposPermitidos, cancellationToken);
         var resultadoGeneral = ConsolidadorResultadoGeneral.Consolidar(resultados);
         var codigosFlujos = flujos.Select(f => f.Codigo).ToList();
         var duracionMs = (long)Stopwatch.GetElapsedTime(inicio).TotalMilliseconds;
@@ -62,6 +71,7 @@ public sealed class EvaluarReglasHandler(
                 idEvaluacion,
                 command.Negocio,
                 command.Proceso,
+                command.TipoPlanId,
                 command.Etapa,
                 codigosFlujos,
                 resultadoGeneral,
@@ -120,7 +130,10 @@ public sealed class EvaluarReglasHandler(
         }
     }
 
-    private List<ReglaPorEvaluar> PrepararReglas(IReadOnlyList<FlujoReglas> flujos)
+    private async Task<List<ReglaPorEvaluar>> PrepararReglasAsync(
+        IReadOnlyList<FlujoReglas> flujos,
+        IReadOnlyList<CampoReglaPermitido> camposPermitidos,
+        CancellationToken cancellationToken)
     {
         var reglasPorEvaluar = new List<ReglaPorEvaluar>();
 
@@ -128,7 +141,7 @@ public sealed class EvaluarReglasHandler(
         {
             foreach (var version in regla.Versiones)
             {
-                var validacion = validador.Validar(version.DefinicionJson);
+                var validacion = await validador.ValidarAsync(version.DefinicionJson, camposPermitidos, cancellationToken);
 
                 if (!validacion.EsValida)
                 {
@@ -146,5 +159,60 @@ public sealed class EvaluarReglasHandler(
         }
 
         return reglasPorEvaluar;
+    }
+
+    private static IReadOnlyList<string> ValidarTiposContexto(
+        JsonElement contexto,
+        IReadOnlyList<CampoReglaPermitido> camposPermitidos)
+    {
+        var invalidos = new List<string>();
+        foreach (var campo in camposPermitidos)
+        {
+            var valor = BuscarValor(contexto, campo.Codigo);
+            if (!valor.Existe || valor.Valor.ValueKind == JsonValueKind.Null)
+            {
+                continue;
+            }
+
+            var tipoValido = campo.TipoValor switch
+            {
+                TipoValorCampo.Texto => valor.Valor.ValueKind == JsonValueKind.String,
+                TipoValorCampo.Numero => valor.Valor.ValueKind == JsonValueKind.Number && valor.Valor.TryGetDecimal(out _),
+                TipoValorCampo.Booleano => valor.Valor.ValueKind is JsonValueKind.True or JsonValueKind.False,
+                _ => false
+            };
+
+            if (valor.TipoIntermedioInvalido || !tipoValido)
+            {
+                invalidos.Add(campo.Codigo);
+            }
+        }
+
+        return invalidos;
+    }
+
+    private static (bool Existe, JsonElement Valor, bool TipoIntermedioInvalido) BuscarValor(JsonElement contexto, string codigo)
+    {
+        var actual = contexto;
+        var segmentos = codigo.Split('.');
+        for (var indice = 0; indice < segmentos.Length; indice++)
+        {
+            if (actual.ValueKind == JsonValueKind.Null)
+            {
+                return (false, default, false);
+            }
+
+            if (actual.ValueKind != JsonValueKind.Object)
+            {
+                return (true, default, true);
+            }
+
+            if (!actual.TryGetProperty(segmentos[indice], out actual))
+            {
+                return (false, default, false);
+            }
+        }
+
+        return (true, actual, false);
     }
 }

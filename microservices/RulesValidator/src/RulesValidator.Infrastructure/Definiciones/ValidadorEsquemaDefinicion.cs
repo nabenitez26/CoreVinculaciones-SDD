@@ -8,7 +8,6 @@ public sealed class ValidadorEsquemaDefinicion
     private const string NombreRecurso = "rule-definition-1.0.schema.json";
 
     private static readonly Lazy<JsonSchema> Esquema = new(CargarEsquema);
-    private readonly CatalogoAllowListReglas _catalogo = new();
 
     public ResultadoValidacionEsquema Validar(string definicionJson)
     {
@@ -36,10 +35,7 @@ public sealed class ValidadorEsquemaDefinicion
 
             if (resultado.IsValid)
             {
-                var erroresCatalogo = _catalogo.Validar(documento.RootElement);
-                return erroresCatalogo.Count == 0
-                    ? ResultadoValidacionEsquema.Valido
-                    : ResultadoValidacionEsquema.Invalido(erroresCatalogo);
+                return ResultadoValidacionEsquema.Valido;
             }
 
             return ResultadoValidacionEsquema.Invalido(ExtraerErrores(resultado));

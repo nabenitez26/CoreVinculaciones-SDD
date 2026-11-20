@@ -8,6 +8,7 @@ public interface IRepositorioReglas
     Task<IReadOnlyList<FlujoReglas>> ObtenerFlujosAplicablesAsync(
         string negocio,
         string proceso,
+        string? tipoPlanId,
         int etapa,
         DateTime fechaEvaluacion,
         CancellationToken cancellationToken);

@@ -34,6 +34,7 @@ Application define:
 
 - `IRepositorioReglas`
 - `IRepositorioEjecucionesReglas`
+- `IRepositorioCatalogoCampos`
 - `IMotorReglas`
 - `IValidadorDefinicionRegla`
 - `IReloj`
@@ -44,6 +45,7 @@ Infrastructure implementa:
 
 - `RepositorioSqlReglas`
 - `RepositorioSqlEjecucionesReglas`
+- `RepositorioSqlCatalogoCampos`
 - `MicrosoftRuleEngineAdapter`
 - `ExpressionBuilder`
 - validación técnica de JSON Schema cuando requiera librería externa.
@@ -55,25 +57,26 @@ Infrastructure implementa:
 3. Handler genera `idEvaluacion` GUID.
 4. Handler determina `fechaEvaluacion` UTC mediante request o `IReloj`.
 5. Repository recupera flujos GLOBAL y del negocio solicitado.
-6. Filtra flujo, regla y versión por estado y vigencia.
-7. Deserializa `definicion_json` a `DefinicionRegla`.
-8. Valida JSON Schema, campos, operadores, tipos y complejidad.
-9. Adapter genera expresión segura.
-10. Microsoft RulesEngine evalúa.
-11. Adapter normaliza resultados.
-12. Handler consolida resultadoGeneral.
-13. Persiste `ejecucion_regla`.
-14. Emite trazas y métricas.
-15. API responde.
+6. Repository recupera el catálogo activo de campos y operadores desde Azure SQL.
+7. Filtra flujo, regla y versión por estado y vigencia.
+8. Deserializa `definicion_json` a `DefinicionRegla`.
+9. Valida JSON Schema, catálogo SQL, tipos y complejidad.
+10. Adapter genera expresión segura desde el catálogo recibido.
+11. Microsoft RulesEngine evalúa.
+12. Adapter normaliza resultados.
+13. Handler consolida resultadoGeneral.
+14. Persiste `ejecucion_regla`.
+15. Emite trazas y métricas.
+16. API responde.
 
 ## 5. Selección GLOBAL
 
-Se realizan dos consultas lógicas, que pueden resolverse en una sola consulta SQL:
+Se recuperan dos alcances, que pueden resolverse en una sola consulta SQL:
 
-- `negocio.codigo = GLOBAL`;
-- `negocio.codigo = negocioSolicitado`.
+- Flujos de `negocio.codigo = GLOBAL` limitados únicamente por `proceso`; no se filtran por etapa ni `tipo_plan_id`.
+- Flujos de `negocio.codigo = negocioSolicitado` filtrados por `proceso` y `etapa`; cuando el proceso es VINCULACION también por `tipo_plan_id`.
 
-Ambas deben coincidir en proceso, etapa y vigencia. Se ordenan por prioridad del flujo y prioridad de la regla.
+Los globales se ordenan antes de los específicos; dentro de cada alcance se ordena por prioridad de flujo y regla. Las reglas/versiones deben estar activas y vigentes.
 
 ## 6. Consolidación
 
@@ -85,6 +88,8 @@ Ambas deben coincidir en proceso, etapa y vigencia. Se ordenan por prioridad del
 ## 7. Seguridad
 
 La BD no almacena expresiones ejecutables.
+
+El catálogo de campos y operadores se obtiene de Azure SQL una vez por evaluación. No se cachea entre evaluaciones, para que las modificaciones del proceso que administra el catálogo surtan efecto en la siguiente solicitud.
 
 `IValidadorDefinicionRegla` valida:
 

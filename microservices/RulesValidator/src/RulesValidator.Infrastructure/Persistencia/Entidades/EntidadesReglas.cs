@@ -1,5 +1,25 @@
 namespace RulesValidator.Infrastructure.Persistencia.Entidades;
 
+public sealed class CampoReglaEntity
+{
+    public long CampoReglaId { get; set; }
+    public string Codigo { get; set; } = null!;
+    public string TipoValor { get; set; } = null!;
+    public bool Activo { get; set; }
+    public DateTime FechaCreacion { get; set; }
+    public string UsuarioCreacion { get; set; } = null!;
+    public DateTime? FechaModificacion { get; set; }
+    public string? UsuarioModificacion { get; set; }
+    public ICollection<CampoReglaOperadorEntity> Operadores { get; set; } = new List<CampoReglaOperadorEntity>();
+}
+
+public sealed class CampoReglaOperadorEntity
+{
+    public long CampoReglaId { get; set; }
+    public string Operador { get; set; } = null!;
+    public CampoReglaEntity CampoRegla { get; set; } = null!;
+}
+
 public sealed class NegocioEntity
 {
     public long NegocioId { get; set; }
@@ -23,6 +43,7 @@ public sealed class FlujoReglasEntity
     public string Nombre { get; set; } = null!;
     public string Proceso { get; set; } = null!;
     public int Etapa { get; set; }
+    public string? TipoPlanId { get; set; }
     public int Prioridad { get; set; }
     public bool Activo { get; set; }
     public DateTime FechaCreacion { get; set; }
@@ -75,6 +96,7 @@ public sealed class EjecucionReglaEntity
     public Guid IdEvaluacion { get; set; }
     public long NegocioId { get; set; }
     public string Proceso { get; set; } = null!;
+    public string? TipoPlanId { get; set; }
     public int Etapa { get; set; }
     public string FlujosJson { get; set; } = null!;
     public string ResultadoGeneral { get; set; } = null!;

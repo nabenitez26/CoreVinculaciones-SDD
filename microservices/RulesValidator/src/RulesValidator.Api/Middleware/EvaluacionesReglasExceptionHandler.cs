@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics;
+using RulesValidator.Api.Dtos;
 using RulesValidator.Api.Errors;
 using RulesValidator.Application.Evaluaciones;
 
@@ -23,6 +24,10 @@ public sealed class EvaluacionesReglasExceptionHandler(ILogger<EvaluacionesRegla
                 StatusCodes.Status404NotFound,
                 "No existe configuración aplicable",
                 "No se encontraron reglas activas y vigentes para los criterios informados."),
+            ContextoNoProcesableException => (
+                StatusCodes.Status422UnprocessableEntity,
+                "Solicitud no procesable",
+                "Uno o más campos del contexto tienen un tipo incompatible."),
             DefinicionReglaInvalidaException => (
                 StatusCodes.Status500InternalServerError,
                 "Error interno",
@@ -41,7 +46,15 @@ public sealed class EvaluacionesReglasExceptionHandler(ILogger<EvaluacionesRegla
                 exception.GetType().Name);
         }
 
-        var problema = ApiProblemDetails.Crear(httpContext, status, titulo, detalle);
+        var errores = exception is ContextoNoProcesableException contextoInvalido
+            ? contextoInvalido.Campos
+                .Select(campo => new ErrorProblemaResponse(
+                    "CONTEXTO_TIPO_INVALIDO",
+                    $"El campo '{campo}' tiene un tipo incompatible.",
+                    campo))
+                .ToList()
+            : null;
+        var problema = ApiProblemDetails.Crear(httpContext, status, titulo, detalle, errores);
         await problema.ExecuteAsync(httpContext);
         return true;
     }

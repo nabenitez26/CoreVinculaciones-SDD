@@ -18,6 +18,7 @@ La solicitud contiene:
 
 - `negocio`, obligatorio;
 - `proceso`, obligatorio;
+- `tipo_plan_id`, obligatorio cuando `proceso = VINCULACION`, varchar de hasta 10 caracteres;
 - `etapa`, obligatoria y mayor que cero;
 - `fechaEvaluacion`, opcional, ISO 8601 UTC;
 - `contexto`, obligatorio.
@@ -44,8 +45,8 @@ Existe un registro especial en `negocio` con `codigo = GLOBAL`.
 
 Para una solicitud de negocio `PENSIONADOS`, RulesValidator selecciona:
 
-1. flujos activos del negocio GLOBAL para el mismo proceso y etapa;
-2. flujos activos del negocio PENSIONADOS para el mismo proceso y etapa.
+1. flujos activos de GLOBAL limitados únicamente al mismo proceso;
+2. flujos activos de PENSIONADOS para el mismo proceso y etapa, y el mismo `tipo_plan_id` si el proceso es VINCULACION.
 
 Las reglas globales se evalúan primero. Después se evalúan las reglas específicas ordenadas por prioridad.
 

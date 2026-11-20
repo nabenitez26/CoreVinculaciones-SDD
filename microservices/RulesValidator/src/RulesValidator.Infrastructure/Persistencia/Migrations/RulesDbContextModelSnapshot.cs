@@ -22,6 +22,90 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.CampoReglaEntity", b =>
+                {
+                    b.Property<long>("CampoReglaId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("campo_regla_id");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("CampoReglaId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit")
+                        .HasColumnName("activo");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(150)")
+                        .HasColumnName("codigo");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("fecha_modificacion");
+
+                    b.Property<string>("TipoValor")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(20)")
+                        .HasColumnName("tipo_valor");
+
+                    b.Property<string>("UsuarioCreacion")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("usuario_creacion");
+
+                    b.Property<string>("UsuarioModificacion")
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("usuario_modificacion");
+
+                    b.HasKey("CampoReglaId")
+                        .HasName("PK_campo_regla");
+
+                    b.HasAlternateKey("Codigo")
+                        .HasName("UK_campo_regla_codigo");
+
+                    b.HasIndex("Activo", "Codigo")
+                        .HasDatabaseName("IX_campo_regla_activo_codigo");
+
+                    b.ToTable("campo_regla", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_campo_regla_tipo_valor", "[tipo_valor] IN ('TEXTO', 'NUMERO', 'BOOLEANO')");
+                        });
+                });
+
+            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.CampoReglaOperadorEntity", b =>
+                {
+                    b.Property<long>("CampoReglaId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("campo_regla_id");
+
+                    b.Property<string>("Operador")
+                        .HasMaxLength(30)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(30)")
+                        .HasColumnName("operador");
+
+                    b.HasKey("CampoReglaId", "Operador")
+                        .HasName("PK_campo_regla_operador");
+
+                    b.ToTable("campo_regla_operador", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_campo_regla_operador_codigo", "[operador] IN ('IGUAL', 'DIFERENTE', 'MAYOR', 'MAYOR_IGUAL', 'MENOR', 'MENOR_IGUAL', 'EN', 'NO_EN')");
+                        });
+                });
+
             modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.EjecucionReglaEntity", b =>
                 {
                     b.Property<long>("EjecucionReglaId")
@@ -92,6 +176,12 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasColumnName("resultados_json");
 
+                    b.Property<string>("TipoPlanId")
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("tipo_plan_id");
+
                     b.HasKey("EjecucionReglaId")
                         .HasName("PK_ejecucion_regla");
 
@@ -132,7 +222,7 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                         .HasColumnType("varchar(100)")
                         .HasColumnName("codigo");
 
-                    b.Property<int>("Etapa")
+                    b.Property<int?>("Etapa")
                         .HasColumnType("int")
                         .HasColumnName("etapa");
 
@@ -166,6 +256,12 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                         .HasColumnType("varchar(100)")
                         .HasColumnName("proceso");
 
+                    b.Property<string>("TipoPlanId")
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("tipo_plan_id");
+
                     b.Property<string>("UsuarioCreacion")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -185,12 +281,12 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                     b.HasAlternateKey("Codigo")
                         .HasName("UK_flujo_reglas_codigo");
 
-                    b.HasIndex("NegocioId", "Proceso", "Etapa", "Activo", "Prioridad")
-                        .HasDatabaseName("IX_flujo_reglas_negocio_proceso_etapa_activo_prioridad");
+                    b.HasIndex("NegocioId", "Proceso", "TipoPlanId", "Etapa", "Activo", "Prioridad")
+                        .HasDatabaseName("IX_flujo_reglas_negocio_proceso_tipo_etapa_activo_prioridad");
 
                     b.ToTable("flujo_reglas", null, t =>
                         {
-                            t.HasCheckConstraint("CK_flujo_reglas_etapa", "[etapa] > 0");
+                            t.HasCheckConstraint("CK_flujo_reglas_etapa", "[etapa] IS NULL OR [etapa] > 0");
 
                             t.HasCheckConstraint("CK_flujo_reglas_prioridad", "[prioridad] >= 0");
                         });
@@ -433,6 +529,18 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                         });
                 });
 
+            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.CampoReglaOperadorEntity", b =>
+                {
+                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.CampoReglaEntity", "CampoRegla")
+                        .WithMany("Operadores")
+                        .HasForeignKey("CampoReglaId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_campo_regla_operador_campo_regla");
+
+                    b.Navigation("CampoRegla");
+                });
+
             modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.EjecucionReglaEntity", b =>
                 {
                     b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.NegocioEntity", "Negocio")
@@ -479,6 +587,11 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                         .HasConstraintName("FK_version_regla_regla");
 
                     b.Navigation("Regla");
+                });
+
+            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.CampoReglaEntity", b =>
+                {
+                    b.Navigation("Operadores");
                 });
 
             modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.FlujoReglasEntity", b =>

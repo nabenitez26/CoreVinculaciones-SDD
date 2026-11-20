@@ -1,35 +1,35 @@
 using System.Globalization;
 using System.Text.Json;
+using RulesValidator.Application.Abstracciones;
 using RulesValidator.Domain.Reglas.Definiciones;
 
 namespace RulesValidator.Infrastructure.Definiciones;
 
 public sealed class ExpressionBuilder
 {
-    private static readonly IReadOnlyDictionary<string, string> Campos =
-        new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["pension.tipo"] = "input1.Pension.Tipo",
-            ["pension.mesadaEnSmlmv"] = "input1.Pension.MesadaEnSmlmv",
-            ["plan.codigo"] = "input1.Plan.Codigo"
-        };
-
-    private readonly CatalogoAllowListReglas _catalogo = new();
-
-    public string Construir(NodoDefinicion nodo) => nodo switch
+    public string Construir(NodoDefinicion nodo, IReadOnlyDictionary<string, CampoReglaPermitido> campos) => nodo switch
     {
-        CondicionDefinicion condicion => ConstruirCondicion(condicion),
-        GrupoDefinicion grupo => ConstruirGrupo(grupo),
+        CondicionDefinicion condicion => ConstruirCondicion(condicion, campos),
+        GrupoDefinicion grupo => ConstruirGrupo(grupo, campos),
         _ => throw new InvalidOperationException("El nodo de definición no está soportado.")
     };
 
-    private string ConstruirCondicion(CondicionDefinicion condicion)
+    private string ConstruirCondicion(CondicionDefinicion condicion, IReadOnlyDictionary<string, CampoReglaPermitido> campos)
     {
-        if (!Campos.TryGetValue(condicion.Campo, out var campo)
-            || !CatalogoAllowListReglas.Permite(condicion.Campo, condicion.Operador))
+        if (!campos.TryGetValue(condicion.Campo, out var configuracion)
+            || !configuracion.Operadores.Contains(condicion.Operador))
         {
             throw new InvalidOperationException("La definición contiene un campo u operador no permitido.");
         }
+
+        var indexador = $"input1[{JsonSerializer.Serialize(condicion.Campo)}]";
+        var campo = configuracion.TipoValor switch
+        {
+            TipoValorCampo.Texto => $"((string){indexador})",
+            TipoValorCampo.Numero => $"((decimal){indexador})",
+            TipoValorCampo.Booleano => $"((bool){indexador})",
+            _ => throw new InvalidOperationException("El tipo de campo no está permitido.")
+        };
 
         if (condicion.Operador is OperadorComparacion.En or OperadorComparacion.NoEn)
         {
@@ -64,7 +64,7 @@ public sealed class ExpressionBuilder
         return $"({campo} {operador} {ConstruirLiteral(condicion.Valor)})";
     }
 
-    private string ConstruirGrupo(GrupoDefinicion grupo)
+    private string ConstruirGrupo(GrupoDefinicion grupo, IReadOnlyDictionary<string, CampoReglaPermitido> campos)
     {
         if (grupo.Condiciones.Count is 0 or > 50)
         {
@@ -78,7 +78,7 @@ public sealed class ExpressionBuilder
             _ => throw new InvalidOperationException("El operador lógico no está permitido.")
         };
 
-        return $"({string.Join($" {combinador} ", grupo.Condiciones.Select(Construir))})";
+        return $"({string.Join($" {combinador} ", grupo.Condiciones.Select(nodo => Construir(nodo, campos)))})";
     }
 
     private static string ConstruirLiteral(object valor) => valor switch

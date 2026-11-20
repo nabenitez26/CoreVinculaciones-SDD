@@ -9,5 +9,6 @@ public interface IMotorReglas
     Task<IReadOnlyList<ResultadoEvaluacionRegla>> EvaluarAsync(
         IReadOnlyList<ReglaPorEvaluar> reglas,
         JsonElement contexto,
+        IReadOnlyList<CampoReglaPermitido> camposPermitidos,
         CancellationToken cancellationToken);
 }

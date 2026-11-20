@@ -13,9 +13,36 @@
 ```text
 negocio 1---N flujo_reglas 1---N regla 1---N version_regla
 negocio 1---N ejecucion_regla
+campo_regla 1---N campo_regla_operador
 ```
 
-## 3. negocio
+## 3. campo_regla
+
+Catálogo operativo de rutas JSON autorizadas. Lo administra un proceso externo a Feature 001; se consulta en cada evaluación y no se mantiene una allow-list de campos en el código.
+
+| Columna | Tipo | Nulo | Restricción |
+|---|---|---:|---|
+| campo_regla_id | bigint identity | No | PK |
+| codigo | varchar(150) | No | UK; ruta JSON segmentada por punto |
+| tipo_valor | varchar(20) | No | CHECK TEXTO, NUMERO o BOOLEANO |
+| activo | bit | No | |
+| fecha_creacion | datetime2 | No | |
+| usuario_creacion | varchar(100) | No | |
+| fecha_modificacion | datetime2 | Sí | |
+| usuario_modificacion | varchar(100) | Sí | |
+
+El código usa segmentos seguros `[A-Za-z_][A-Za-z0-9_]*` separados por punto. La migración inicial registra los campos usados por RV-001, RV-101 y RV-002.
+
+## 4. campo_regla_operador
+
+| Columna | Tipo | Nulo | Restricción |
+|---|---|---:|---|
+| campo_regla_id | bigint | No | PK compuesta; FK campo_regla |
+| operador | varchar(30) | No | PK compuesta; CHECK operador neutral permitido |
+
+Las tablas de catálogo son la fuente de verdad para campos, tipos y combinaciones campo/operador habilitados. El servicio lee el conjunto activo una vez por evaluación; cambios efectuados en SQL aplican en la siguiente evaluación.
+
+## 5. negocio
 
 | Columna | Tipo | Nulo | Restricción |
 |---|---|---:|---|
@@ -31,7 +58,7 @@ negocio 1---N ejecucion_regla
 
 Debe existir `codigo = GLOBAL`.
 
-## 4. flujo_reglas
+## 6. flujo_reglas
 
 | Columna | Tipo | Nulo | Restricción |
 |---|---|---:|---|
@@ -40,7 +67,8 @@ Debe existir `codigo = GLOBAL`.
 | codigo | varchar(100) | No | UK |
 | nombre | varchar(200) | No | |
 | proceso | varchar(100) | No | |
-| etapa | int | No | CHECK etapa > 0 |
+| tipo_plan_id | varchar(10) | Sí | Obligatorio para flujos específicos de VINCULACION; NULL para otros procesos y flujos globales |
+| etapa | int | Sí | NULL para flujos globales de proceso; si tiene valor, CHECK etapa > 0 |
 | prioridad | int | No | CHECK prioridad >= 0 |
 | activo | bit | No | |
 | fecha_creacion | datetime2 | No | |
@@ -48,11 +76,11 @@ Debe existir `codigo = GLOBAL`.
 | fecha_modificacion | datetime2 | Sí | |
 | usuario_modificacion | varchar(100) | Sí | |
 
-Índice: `(negocio_id, proceso, etapa, activo, prioridad)`.
+Índice: `(negocio_id, proceso, tipo_plan_id, etapa, activo, prioridad)`.
 
-La etapa se mantiene relacionalmente en `flujo_reglas`.
+Los flujos GLOBAL se limitan únicamente por `proceso`; usan `etapa = NULL` y `tipo_plan_id = NULL`. Los flujos específicos de negocio se seleccionan por proceso y etapa; para `VINCULACION`, además por `tipo_plan_id`.
 
-## 5. regla
+## 7. regla
 
 | Columna | Tipo | Nulo | Restricción |
 |---|---|---:|---|
@@ -71,7 +99,7 @@ UK: `(flujo_reglas_id, codigo)`.
 
 `tipo_regla IN ('PARAMETRIZABLE','ESPECIALIZADA')`.
 
-## 6. version_regla
+## 8. version_regla
 
 | Columna | Tipo | Nulo | Restricción |
 |---|---|---:|---|
@@ -99,7 +127,7 @@ Severidades: INFORMATIVA, ADVERTENCIA, BLOQUEANTE.
 
 `codigo_error`, `mensaje_error`, `severidad`, vigencias y aprobación son la única fuente de verdad relacional. No se duplican dentro de `definicion_json`.
 
-## 7. ejecucion_regla
+## 9. ejecucion_regla
 
 | Columna | Tipo | Nulo | Restricción |
 |---|---|---:|---|
@@ -107,6 +135,7 @@ Severidades: INFORMATIVA, ADVERTENCIA, BLOQUEANTE.
 | id_evaluacion | uniqueidentifier | No | UK |
 | negocio_id | bigint | No | FK negocio |
 | proceso | varchar(100) | No | |
+| tipo_plan_id | varchar(10) | Sí | Valor solicitado para VINCULACION |
 | etapa | int | No | |
 | flujos_json | nvarchar(max) | No | ISJSON = 1 |
 | resultado_general | varchar(30) | No | CHECK |
@@ -121,7 +150,7 @@ Severidades: INFORMATIVA, ADVERTENCIA, BLOQUEANTE.
 
 No se persiste el contexto completo ni PII.
 
-## 8. Vigencia
+## 10. Vigencia
 
 ```text
 estado = ACTIVA

@@ -15,9 +15,11 @@ public sealed class MicrosoftRuleEngineAdapter(ExpressionBuilder expressionBuild
     public async Task<IReadOnlyList<ResultadoEvaluacionRegla>> EvaluarAsync(
         IReadOnlyList<ReglaPorEvaluar> reglas,
         JsonElement contexto,
+        IReadOnlyList<CampoReglaPermitido> camposPermitidos,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(reglas);
+        ArgumentNullException.ThrowIfNull(camposPermitidos);
         cancellationToken.ThrowIfCancellationRequested();
 
         if (reglas.Count == 0)
@@ -25,8 +27,9 @@ public sealed class MicrosoftRuleEngineAdapter(ExpressionBuilder expressionBuild
             return [];
         }
 
+        var campos = camposPermitidos.ToDictionary(campo => campo.Codigo, StringComparer.Ordinal);
+        var valoresContexto = CrearContexto(contexto, camposPermitidos);
         var resultados = new ResultadoEvaluacionRegla?[reglas.Count];
-        var contextoMotor = CrearContexto(contexto);
         var aplicabilidades = new List<(int Indice, string Expresion)>();
         var aplicables = new List<int>();
 
@@ -39,18 +42,18 @@ public sealed class MicrosoftRuleEngineAdapter(ExpressionBuilder expressionBuild
                 continue;
             }
 
-            if (ObtenerCampoFaltante(aplicabilidad, contexto) is not null)
+            if (ObtenerCampoFaltante(aplicabilidad, contexto, campos) is not null)
             {
                 resultados[indice] = CrearIndeterminado(reglas[indice]);
                 continue;
             }
 
-            aplicabilidades.Add((indice, expressionBuilder.Construir(aplicabilidad)));
+            aplicabilidades.Add((indice, expressionBuilder.Construir(aplicabilidad, campos)));
         }
 
         if (aplicabilidades.Count > 0)
         {
-            var resultadosAplicabilidad = await EjecutarPredicadosAsync(aplicabilidades, contextoMotor, cancellationToken);
+            var resultadosAplicabilidad = await EjecutarPredicadosAsync(aplicabilidades, valoresContexto, cancellationToken);
             foreach (var (indice, _) in aplicabilidades)
             {
                 if (resultadosAplicabilidad[indice])
@@ -67,18 +70,18 @@ public sealed class MicrosoftRuleEngineAdapter(ExpressionBuilder expressionBuild
         var condiciones = new List<(int Indice, string Expresion)>();
         foreach (var indice in aplicables)
         {
-            if (ObtenerCampoFaltante(reglas[indice].Definicion.Raiz, contexto) is not null)
+            if (ObtenerCampoFaltante(reglas[indice].Definicion.Raiz, contexto, campos) is not null)
             {
                 resultados[indice] = CrearIndeterminado(reglas[indice]);
                 continue;
             }
 
-            condiciones.Add((indice, expressionBuilder.Construir(reglas[indice].Definicion.Raiz)));
+            condiciones.Add((indice, expressionBuilder.Construir(reglas[indice].Definicion.Raiz, campos)));
         }
 
         if (condiciones.Count > 0)
         {
-            var resultadosCondicion = await EjecutarPredicadosAsync(condiciones, contextoMotor, cancellationToken);
+            var resultadosCondicion = await EjecutarPredicadosAsync(condiciones, valoresContexto, cancellationToken);
             foreach (var (indice, _) in condiciones)
             {
                 resultados[indice] = resultadosCondicion[indice]
@@ -93,7 +96,7 @@ public sealed class MicrosoftRuleEngineAdapter(ExpressionBuilder expressionBuild
 
     private async Task<IReadOnlyDictionary<int, bool>> EjecutarPredicadosAsync(
         IReadOnlyList<(int Indice, string Expresion)> predicados,
-        ContextoMotorReglas contexto,
+        Dictionary<string, object> contexto,
         CancellationToken cancellationToken)
     {
         var workflowName = $"RulesValidator_{Guid.NewGuid():N}";
@@ -145,12 +148,7 @@ public sealed class MicrosoftRuleEngineAdapter(ExpressionBuilder expressionBuild
 
     private static ReSettings CrearConfiguracionSegura() => new()
     {
-        CustomTypes =
-        [
-            typeof(ContextoMotorReglas),
-            typeof(PensionMotorReglas),
-            typeof(PlanMotorReglas)
-        ],
+        CustomTypes = [typeof(Dictionary<string, object>)],
         AutoRegisterInputType = false,
         AutoExecuteActions = false,
         EnableScopedParams = false,
@@ -159,35 +157,49 @@ public sealed class MicrosoftRuleEngineAdapter(ExpressionBuilder expressionBuild
         IgnoreException = false
     };
 
-    private static ContextoMotorReglas CrearContexto(JsonElement contexto) =>
-        new()
-        {
-            Pension = new PensionMotorReglas
-            {
-                Tipo = LeerTexto(contexto, "pension", "tipo") ?? string.Empty,
-                MesadaEnSmlmv = LeerNumero(contexto, "pension", "mesadaEnSmlmv") ?? 0m
-            },
-            Plan = new PlanMotorReglas
-            {
-                Codigo = LeerTexto(contexto, "plan", "codigo") ?? string.Empty
-            }
-        };
-
-    private static string? ObtenerCampoFaltante(NodoDefinicion nodo, JsonElement contexto)
+    private static Dictionary<string, object> CrearContexto(
+        JsonElement contexto,
+        IReadOnlyList<CampoReglaPermitido> camposPermitidos)
     {
-        foreach (var campo in Campos(nodo))
+        var valores = new Dictionary<string, object>(StringComparer.Ordinal);
+        foreach (var campo in camposPermitidos)
         {
-            var disponible = campo switch
+            var estado = LeerValor(contexto, campo);
+            if (estado.EsIncompatible)
             {
-                "pension.tipo" => LeerTexto(contexto, "pension", "tipo") is not null,
-                "pension.mesadaEnSmlmv" => LeerNumero(contexto, "pension", "mesadaEnSmlmv") is not null,
-                "plan.codigo" => LeerTexto(contexto, "plan", "codigo") is not null,
-                _ => throw new InvalidOperationException("La definición contiene un campo fuera del catálogo.")
-            };
+                throw new InvalidOperationException("El contexto no coincide con los tipos del catálogo activo.");
+            }
 
-            if (!disponible)
+            if (estado.Valor is not null)
             {
-                return campo;
+                valores.Add(campo.Codigo, estado.Valor);
+            }
+        }
+
+        return valores;
+    }
+
+    private static string? ObtenerCampoFaltante(
+        NodoDefinicion nodo,
+        JsonElement contexto,
+        IReadOnlyDictionary<string, CampoReglaPermitido> campos)
+    {
+        foreach (var codigo in Campos(nodo))
+        {
+            if (!campos.TryGetValue(codigo, out var configuracion))
+            {
+                throw new InvalidOperationException("La definición contiene un campo ausente del catálogo activo.");
+            }
+
+            var estado = LeerValor(contexto, configuracion);
+            if (estado.EsIncompatible)
+            {
+                throw new InvalidOperationException("El contexto no coincide con los tipos del catálogo activo.");
+            }
+
+            if (estado.Valor is null)
+            {
+                return codigo;
             }
         }
 
@@ -201,33 +213,39 @@ public sealed class MicrosoftRuleEngineAdapter(ExpressionBuilder expressionBuild
         _ => throw new InvalidOperationException("El nodo de definición no está soportado.")
     };
 
-    private static string? LeerTexto(JsonElement contexto, string objeto, string campo)
+    private static ValorContexto LeerValor(JsonElement contexto, CampoReglaPermitido campo)
     {
-        if (contexto.ValueKind != JsonValueKind.Object
-            || !contexto.TryGetProperty(objeto, out var seccion)
-            || seccion.ValueKind != JsonValueKind.Object
-            || !seccion.TryGetProperty(campo, out var valor)
-            || valor.ValueKind != JsonValueKind.String)
+        var actual = contexto;
+        foreach (var segmento in campo.Codigo.Split('.'))
         {
-            return null;
+            if (actual.ValueKind == JsonValueKind.Null)
+            {
+                return new(null, false);
+            }
+
+            if (actual.ValueKind != JsonValueKind.Object)
+            {
+                return new(null, true);
+            }
+
+            if (!actual.TryGetProperty(segmento, out actual))
+            {
+                return new(null, false);
+            }
         }
 
-        return valor.GetString();
-    }
-
-    private static decimal? LeerNumero(JsonElement contexto, string objeto, string campo)
-    {
-        if (contexto.ValueKind != JsonValueKind.Object
-            || !contexto.TryGetProperty(objeto, out var seccion)
-            || seccion.ValueKind != JsonValueKind.Object
-            || !seccion.TryGetProperty(campo, out var valor)
-            || valor.ValueKind != JsonValueKind.Number
-            || !valor.TryGetDecimal(out var numero))
+        if (actual.ValueKind == JsonValueKind.Null)
         {
-            return null;
+            return new(null, false);
         }
 
-        return numero;
+        return campo.TipoValor switch
+        {
+            TipoValorCampo.Texto when actual.ValueKind == JsonValueKind.String => new(actual.GetString(), false),
+            TipoValorCampo.Numero when actual.ValueKind == JsonValueKind.Number && actual.TryGetDecimal(out var numero) => new(numero, false),
+            TipoValorCampo.Booleano when actual.ValueKind is JsonValueKind.True or JsonValueKind.False => new(actual.GetBoolean(), false),
+            _ => new(null, true)
+        };
     }
 
     private static ResultadoEvaluacionRegla CrearCumple(ReglaPorEvaluar regla) =>
@@ -260,4 +278,6 @@ public sealed class MicrosoftRuleEngineAdapter(ExpressionBuilder expressionBuild
             regla.CodigoError,
             regla.MensajeError);
     }
+
+    private sealed record ValorContexto(object? Valor, bool EsIncompatible);
 }

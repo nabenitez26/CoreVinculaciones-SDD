@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace RulesValidator.Api.Dtos;
 
@@ -8,6 +9,9 @@ public sealed record SolicitudEvaluacionReglasRequest
     public string? Negocio { get; init; }
 
     public string? Proceso { get; init; }
+
+    [JsonPropertyName("tipo_plan_id")]
+    public string? TipoPlanId { get; init; }
 
     public int? Etapa { get; init; }
 

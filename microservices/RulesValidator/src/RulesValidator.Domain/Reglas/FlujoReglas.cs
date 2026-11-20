@@ -7,15 +7,19 @@ public sealed class FlujoReglas
         string codigo,
         string nombre,
         string proceso,
-        int etapa,
+        int? etapa,
         int prioridad,
         bool activo,
-        IEnumerable<Regla>? reglas = null)
+        IEnumerable<Regla>? reglas = null,
+        string? tipoPlanId = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(codigo);
         ArgumentException.ThrowIfNullOrWhiteSpace(nombre);
         ArgumentException.ThrowIfNullOrWhiteSpace(proceso);
-        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(etapa, 0);
+        if (etapa is <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(etapa));
+        }
         ArgumentOutOfRangeException.ThrowIfNegative(prioridad);
 
         NegocioId = negocioId;
@@ -23,6 +27,7 @@ public sealed class FlujoReglas
         Nombre = nombre;
         Proceso = proceso;
         Etapa = etapa;
+        TipoPlanId = tipoPlanId;
         Prioridad = prioridad;
         Activo = activo;
         Reglas = reglas?.ToList() ?? [];
@@ -38,7 +43,9 @@ public sealed class FlujoReglas
 
     public string Proceso { get; private set; }
 
-    public int Etapa { get; private set; }
+    public int? Etapa { get; private set; }
+
+    public string? TipoPlanId { get; private set; }
 
     public int Prioridad { get; private set; }
 

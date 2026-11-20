@@ -5,6 +5,8 @@ namespace RulesValidator.Infrastructure.Persistencia;
 
 public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : DbContext(options)
 {
+    public DbSet<CampoReglaEntity> CamposRegla => Set<CampoReglaEntity>();
+    public DbSet<CampoReglaOperadorEntity> OperadoresCampoRegla => Set<CampoReglaOperadorEntity>();
     public DbSet<NegocioEntity> Negocios => Set<NegocioEntity>();
     public DbSet<FlujoReglasEntity> FlujosReglas => Set<FlujoReglasEntity>();
     public DbSet<ReglaEntity> Reglas => Set<ReglaEntity>();
@@ -13,11 +15,46 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        ConfigurarCampoRegla(modelBuilder);
+        ConfigurarCampoReglaOperador(modelBuilder);
         ConfigurarNegocio(modelBuilder);
         ConfigurarFlujoReglas(modelBuilder);
         ConfigurarRegla(modelBuilder);
         ConfigurarVersionRegla(modelBuilder);
         ConfigurarEjecucionRegla(modelBuilder);
+    }
+
+    private static void ConfigurarCampoRegla(ModelBuilder modelBuilder)
+    {
+        var entidad = modelBuilder.Entity<CampoReglaEntity>();
+        entidad.ToTable("campo_regla", tabla =>
+            tabla.HasCheckConstraint("CK_campo_regla_tipo_valor", "[tipo_valor] IN ('TEXTO', 'NUMERO', 'BOOLEANO')"));
+        entidad.HasKey(e => e.CampoReglaId).HasName("PK_campo_regla");
+        entidad.Property(e => e.CampoReglaId).HasColumnName("campo_regla_id").UseIdentityColumn();
+        entidad.Property(e => e.Codigo).HasColumnName("codigo").HasColumnType("varchar(150)").HasMaxLength(150).IsUnicode(false).IsRequired();
+        entidad.Property(e => e.TipoValor).HasColumnName("tipo_valor").HasColumnType("varchar(20)").HasMaxLength(20).IsUnicode(false).IsRequired();
+        entidad.Property(e => e.Activo).HasColumnName("activo").IsRequired();
+        entidad.Property(e => e.FechaCreacion).HasColumnName("fecha_creacion").HasColumnType("datetime2").IsRequired();
+        entidad.Property(e => e.UsuarioCreacion).HasColumnName("usuario_creacion").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false).IsRequired();
+        entidad.Property(e => e.FechaModificacion).HasColumnName("fecha_modificacion").HasColumnType("datetime2");
+        entidad.Property(e => e.UsuarioModificacion).HasColumnName("usuario_modificacion").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false);
+        entidad.HasAlternateKey(e => e.Codigo).HasName("UK_campo_regla_codigo");
+        entidad.HasIndex(e => new { e.Activo, e.Codigo }).HasDatabaseName("IX_campo_regla_activo_codigo");
+    }
+
+    private static void ConfigurarCampoReglaOperador(ModelBuilder modelBuilder)
+    {
+        var entidad = modelBuilder.Entity<CampoReglaOperadorEntity>();
+        entidad.ToTable("campo_regla_operador", tabla =>
+            tabla.HasCheckConstraint("CK_campo_regla_operador_codigo", "[operador] IN ('IGUAL', 'DIFERENTE', 'MAYOR', 'MAYOR_IGUAL', 'MENOR', 'MENOR_IGUAL', 'EN', 'NO_EN')"));
+        entidad.HasKey(e => new { e.CampoReglaId, e.Operador }).HasName("PK_campo_regla_operador");
+        entidad.Property(e => e.CampoReglaId).HasColumnName("campo_regla_id");
+        entidad.Property(e => e.Operador).HasColumnName("operador").HasColumnType("varchar(30)").HasMaxLength(30).IsUnicode(false);
+        entidad.HasOne(e => e.CampoRegla)
+            .WithMany(e => e.Operadores)
+            .HasForeignKey(e => e.CampoReglaId)
+            .OnDelete(DeleteBehavior.NoAction)
+            .HasConstraintName("FK_campo_regla_operador_campo_regla");
     }
 
     private static void ConfigurarNegocio(ModelBuilder modelBuilder)
@@ -42,7 +79,7 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
         var entidad = modelBuilder.Entity<FlujoReglasEntity>();
         entidad.ToTable("flujo_reglas", tabla =>
         {
-            tabla.HasCheckConstraint("CK_flujo_reglas_etapa", "[etapa] > 0");
+            tabla.HasCheckConstraint("CK_flujo_reglas_etapa", "[etapa] IS NULL OR [etapa] > 0");
             tabla.HasCheckConstraint("CK_flujo_reglas_prioridad", "[prioridad] >= 0");
         });
         entidad.HasKey(e => e.FlujoReglasId).HasName("PK_flujo_reglas");
@@ -52,6 +89,7 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
         entidad.Property(e => e.Nombre).HasColumnName("nombre").HasColumnType("varchar(200)").HasMaxLength(200).IsUnicode(false).IsRequired();
         entidad.Property(e => e.Proceso).HasColumnName("proceso").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false).IsRequired();
         entidad.Property(e => e.Etapa).HasColumnName("etapa").IsRequired();
+        entidad.Property(e => e.TipoPlanId).HasColumnName("tipo_plan_id").HasColumnType("varchar(10)").HasMaxLength(10).IsUnicode(false);
         entidad.Property(e => e.Prioridad).HasColumnName("prioridad").IsRequired();
         entidad.Property(e => e.Activo).HasColumnName("activo").IsRequired();
         entidad.Property(e => e.FechaCreacion).HasColumnName("fecha_creacion").HasColumnType("datetime2").IsRequired();
@@ -59,8 +97,8 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
         entidad.Property(e => e.FechaModificacion).HasColumnName("fecha_modificacion").HasColumnType("datetime2");
         entidad.Property(e => e.UsuarioModificacion).HasColumnName("usuario_modificacion").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false);
         entidad.HasAlternateKey(e => e.Codigo).HasName("UK_flujo_reglas_codigo");
-        entidad.HasIndex(e => new { e.NegocioId, e.Proceso, e.Etapa, e.Activo, e.Prioridad })
-            .HasDatabaseName("IX_flujo_reglas_negocio_proceso_etapa_activo_prioridad");
+        entidad.HasIndex(e => new { e.NegocioId, e.Proceso, e.TipoPlanId, e.Etapa, e.Activo, e.Prioridad })
+            .HasDatabaseName("IX_flujo_reglas_negocio_proceso_tipo_etapa_activo_prioridad");
         entidad.HasOne(e => e.Negocio)
             .WithMany(e => e.FlujosReglas)
             .HasForeignKey(e => e.NegocioId)
@@ -144,6 +182,7 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
         entidad.Property(e => e.IdEvaluacion).HasColumnName("id_evaluacion").IsRequired();
         entidad.Property(e => e.NegocioId).HasColumnName("negocio_id").IsRequired();
         entidad.Property(e => e.Proceso).HasColumnName("proceso").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false).IsRequired();
+        entidad.Property(e => e.TipoPlanId).HasColumnName("tipo_plan_id").HasColumnType("varchar(10)").HasMaxLength(10).IsUnicode(false);
         entidad.Property(e => e.Etapa).HasColumnName("etapa").IsRequired();
         entidad.Property(e => e.FlujosJson).HasColumnName("flujos_json").HasColumnType("nvarchar(max)").IsRequired();
         entidad.Property(e => e.ResultadoGeneral).HasColumnName("resultado_general").HasColumnType("varchar(30)").HasMaxLength(30).IsUnicode(false).IsRequired();

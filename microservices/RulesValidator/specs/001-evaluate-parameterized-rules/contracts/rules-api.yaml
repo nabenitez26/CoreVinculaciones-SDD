@@ -68,6 +68,16 @@ components:
           type: string
           maxLength: 100
           example: VINCULACION
+        tipo_plan_id:
+          type: string
+          maxLength: 10
+          description: Obligatorio cuando proceso es VINCULACION; se usa como criterio de selección de reglas.
+          example: PENSIONADO
+        tipo_plan_id:
+          type: string
+          maxLength: 10
+          description: Obligatorio cuando proceso es VINCULACION; se omite para otros procesos.
+          example: PENSIONADO
         etapa:
           type: integer
           format: int32

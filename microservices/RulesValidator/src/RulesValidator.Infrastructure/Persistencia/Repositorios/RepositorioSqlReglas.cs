@@ -12,10 +12,12 @@ public sealed class RepositorioSqlReglas(RulesDbContext contexto) : IRepositorio
     public async Task<IReadOnlyList<FlujoReglas>> ObtenerFlujosAplicablesAsync(
         string negocio,
         string proceso,
+        string? tipoPlanId,
         int etapa,
         DateTime fechaEvaluacion,
         CancellationToken cancellationToken)
     {
+        var requiereTipoPlan = string.Equals(proceso, "VINCULACION", StringComparison.OrdinalIgnoreCase);
         var codigosNegocio = string.Equals(negocio, CodigoNegocioGlobal, StringComparison.Ordinal)
             ? [CodigoNegocioGlobal]
             : new[] { CodigoNegocioGlobal, negocio };
@@ -25,7 +27,10 @@ public sealed class RepositorioSqlReglas(RulesDbContext contexto) : IRepositorio
             .Where(f => codigosNegocio.Contains(f.Negocio.Codigo)
                 && f.Activo
                 && f.Proceso == proceso
-                && f.Etapa == etapa
+                && ((f.Negocio.Codigo == CodigoNegocioGlobal)
+                    || (f.Negocio.Codigo == negocio
+                        && f.Etapa == etapa
+                        && f.TipoPlanId == (requiereTipoPlan ? tipoPlanId : null)))
                 && f.Reglas.Any(r => r.Activo
                     && r.Versiones.Any(v => v.Estado == "ACTIVA"
                         && v.FechaInicioVigencia <= fechaEvaluacion
@@ -57,7 +62,8 @@ public sealed class RepositorioSqlReglas(RulesDbContext contexto) : IRepositorio
             flujo.Etapa,
             flujo.Prioridad,
             flujo.Activo,
-            flujo.Reglas.Select(MapearRegla));
+            flujo.Reglas.Select(MapearRegla),
+            flujo.TipoPlanId);
 
     private static Regla MapearRegla(ReglaEntity regla) =>
         new(

@@ -31,6 +31,7 @@ public sealed class RepositorioSqlEjecucionesReglas(RulesDbContext contexto) : I
             IdEvaluacion = ejecucion.IdEvaluacion,
             NegocioId = negocioId.Value,
             Proceso = ejecucion.Proceso,
+            TipoPlanId = ejecucion.TipoPlanId,
             Etapa = ejecucion.Etapa,
             FlujosJson = JsonSerializer.Serialize(ejecucion.FlujosReglas, OpcionesJson),
             ResultadoGeneral = MapearEstadoGeneral(ejecucion.ResultadoGeneral),

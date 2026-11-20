@@ -41,7 +41,14 @@ La definición de RV-002 expresa `plan.codigo = TP-01` en el nodo raíz opcional
 
 ## 5. Reglas globales
 
-Dado negocio PENSIONADOS, proceso VINCULACION y etapa 4, se recuperan primero reglas GLOBAL y luego PENSIONADOS. Una regla GLOBAL inactiva no se evalúa.
+Dado negocio PENSIONADOS, proceso VINCULACION, tipo_plan_id PENSIONADO y etapa 4, se recuperan primero las reglas GLOBAL del proceso sin filtrar etapa ni tipo, y luego las reglas de PENSIONADOS que coinciden con etapa y tipo_plan_id. Una regla GLOBAL inactiva no se evalúa.
+
+## 5.1 tipo_plan_id
+
+- Proceso VINCULACION sin `tipo_plan_id` -> 400 ProblemDetails.
+- Proceso VINCULACION con `tipo_plan_id` de más de 10 caracteres -> 400 ProblemDetails.
+- Proceso distinto de VINCULACION con `tipo_plan_id` -> 400 ProblemDetails.
+- Proceso distinto de VINCULACION puede omitir `tipo_plan_id`.
 
 ## 6. Vigencia
 
@@ -76,6 +83,8 @@ Dado negocio PENSIONADOS, proceso VINCULACION y etapa 4, se recuperan primero re
 ## 9. Seguridad
 
 - Campo desconocido -> definición rechazada.
+- Campo activo agregado al catálogo SQL por el proceso administrador -> aceptado en la siguiente evaluación sin cambiar binarios.
+- Campo inactivo o removido del catálogo -> definición que lo referencia rechazada.
 - Operador desconocido -> rechazada.
 - Tipo incompatible -> rechazada.
 - Propiedad JSON extra -> rechazada.

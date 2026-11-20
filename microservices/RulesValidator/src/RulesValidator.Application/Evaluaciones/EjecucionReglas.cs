@@ -6,6 +6,7 @@ public sealed record EjecucionReglas(
     Guid IdEvaluacion,
     string Negocio,
     string Proceso,
+    string? TipoPlanId,
     int Etapa,
     IReadOnlyList<string> FlujosReglas,
     EstadoEvaluacionGeneral ResultadoGeneral,

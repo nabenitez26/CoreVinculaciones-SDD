@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddDbContext<RulesDbContext>(options => options.UseSqlServer(connectionString));
         services.AddScoped<IRepositorioReglas, RepositorioSqlReglas>();
         services.AddScoped<IRepositorioEjecucionesReglas, RepositorioSqlEjecucionesReglas>();
+        services.AddScoped<IRepositorioCatalogoCampos, RepositorioSqlCatalogoCampos>();
         services.AddSingleton<ExpressionBuilder>();
         services.AddScoped<IMotorReglas, MicrosoftRuleEngineAdapter>();
         services.AddScoped<IValidadorDefinicionRegla, ValidadorDefinicionRegla>();

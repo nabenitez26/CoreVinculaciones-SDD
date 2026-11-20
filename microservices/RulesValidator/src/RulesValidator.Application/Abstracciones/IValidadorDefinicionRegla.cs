@@ -2,5 +2,8 @@ namespace RulesValidator.Application.Abstracciones;
 
 public interface IValidadorDefinicionRegla
 {
-    ResultadoValidacionDefinicion Validar(string definicionJson);
+    Task<ResultadoValidacionDefinicion> ValidarAsync(
+        string definicionJson,
+        IReadOnlyList<CampoReglaPermitido> camposPermitidos,
+        CancellationToken cancellationToken);
 }

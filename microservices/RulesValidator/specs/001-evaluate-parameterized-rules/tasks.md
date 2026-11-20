@@ -21,17 +21,17 @@
 ## Modelo neutral y seguridad
 
 - [x] T013 Incorporar y validar `rule-definition-1.0.schema.json`.
-- [x] T014 Implementar catálogo allow-list de campos y operadores.
+- [x] T014 Implementar catálogo allow-list de campos y operadores configurable desde Azure SQL.
 - [x] T015 Validar tipos, propiedades desconocidas, profundidad máxima 5, máximo 50 condiciones y máximo 50 valores EN/NO_EN.
 - [x] T016 Garantizar que definiciones rechazadas no lleguen al Adapter.
 
 ## Azure SQL
 
-- [x] T017 Crear `RulesDbContext` y mappings de negocio, flujo_reglas, regla, version_regla y ejecucion_regla.
-- [x] T018 Configurar PK, FK, UK, índices y CHECK de data-model.md.
-- [x] T019 Crear migración inicial.
+- [x] T017 Crear `RulesDbContext` y mappings de negocio, flujo_reglas, regla, version_regla, ejecucion_regla y catálogo de campos.
+- [x] T018 Configurar PK, FK, UK, índices y CHECK de data-model.md, incluido el catálogo dinámico.
+- [x] T019 Crear las migraciones inicial y del catálogo dinámico.
 - [x] T020 Implementar `RepositorioSqlReglas`.
-- [x] T021 Consultar reglas GLOBAL y específicas por negocio, proceso y etapa.
+- [x] T021 Consultar reglas GLOBAL por proceso y reglas específicas por negocio, proceso, etapa y `tipo_plan_id`.
 - [x] T022 Filtrar flujo/regla activos, versión ACTIVA y vigencia temporal inclusiva; usar fecha recibida desde Application.
 - [x] T023 Implementar `RepositorioSqlEjecucionesReglas` y persistir ejecución después de consolidar.
 

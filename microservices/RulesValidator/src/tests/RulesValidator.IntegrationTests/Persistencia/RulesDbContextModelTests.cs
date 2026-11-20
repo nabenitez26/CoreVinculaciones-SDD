@@ -16,11 +16,13 @@ public sealed class RulesDbContextModelTests
     }
 
     [Fact]
-    public void Mapea_las_cinco_tablas_del_modelo()
+    public void Mapea_las_siete_tablas_del_modelo()
     {
         using var contexto = CrearContexto();
         var nombres = contexto.Model.GetEntityTypes().Select(e => e.GetTableName()).ToHashSet();
 
+        Assert.Contains("campo_regla", nombres);
+        Assert.Contains("campo_regla_operador", nombres);
         Assert.Contains("negocio", nombres);
         Assert.Contains("flujo_reglas", nombres);
         Assert.Contains("regla", nombres);
@@ -33,6 +35,8 @@ public sealed class RulesDbContextModelTests
     {
         using var contexto = CrearContexto();
         var negocio = contexto.Model.FindEntityType(typeof(NegocioEntity))!;
+        var campo = contexto.Model.FindEntityType(typeof(CampoReglaEntity))!;
+        var operadorCampo = contexto.Model.FindEntityType(typeof(CampoReglaOperadorEntity))!;
         var flujo = contexto.Model.FindEntityType(typeof(FlujoReglasEntity))!;
         var regla = contexto.Model.FindEntityType(typeof(ReglaEntity))!;
         var version = contexto.Model.FindEntityType(typeof(VersionReglaEntity))!;
@@ -40,11 +44,15 @@ public sealed class RulesDbContextModelTests
 
         Assert.Contains(negocio.GetKeys(), k => k.IsPrimaryKey() && k.GetName() == "PK_negocio");
         Assert.Contains(negocio.GetKeys(), k => !k.IsPrimaryKey() && k.GetName() == "UK_negocio_codigo");
+        Assert.Contains(campo.GetKeys(), k => k.IsPrimaryKey() && k.GetName() == "PK_campo_regla");
+        Assert.Contains(campo.GetKeys(), k => !k.IsPrimaryKey() && k.GetName() == "UK_campo_regla_codigo");
+        Assert.Contains(operadorCampo.GetKeys(), k => k.IsPrimaryKey() && k.GetName() == "PK_campo_regla_operador");
         Assert.Contains(flujo.GetKeys(), k => !k.IsPrimaryKey() && k.GetName() == "UK_flujo_reglas_codigo");
         Assert.Contains(regla.GetKeys(), k => !k.IsPrimaryKey() && k.GetName() == "UK_regla_flujo_codigo");
         Assert.Contains(version.GetKeys(), k => !k.IsPrimaryKey() && k.GetName() == "UK_version_regla_regla_version");
         Assert.Contains(ejecucion.GetKeys(), k => !k.IsPrimaryKey() && k.GetName() == "UK_ejecucion_regla_id_evaluacion");
         Assert.Single(flujo.GetForeignKeys());
+        Assert.Single(operadorCampo.GetForeignKeys());
         Assert.Single(regla.GetForeignKeys());
         Assert.Single(version.GetForeignKeys());
         Assert.Single(ejecucion.GetForeignKeys());
@@ -55,11 +63,16 @@ public sealed class RulesDbContextModelTests
     {
         using var contexto = CrearContexto();
         var flujo = contexto.Model.FindEntityType(typeof(FlujoReglasEntity))!;
+        var campo = contexto.Model.FindEntityType(typeof(CampoReglaEntity))!;
+        var operadorCampo = contexto.Model.FindEntityType(typeof(CampoReglaOperadorEntity))!;
         var regla = contexto.Model.FindEntityType(typeof(ReglaEntity))!;
         var version = contexto.Model.FindEntityType(typeof(VersionReglaEntity))!;
         var ejecucion = contexto.Model.FindEntityType(typeof(EjecucionReglaEntity))!;
 
-        Assert.Contains(flujo.GetIndexes(), i => i.GetDatabaseName() == "IX_flujo_reglas_negocio_proceso_etapa_activo_prioridad");
+        Assert.Contains(flujo.GetIndexes(), i => i.GetDatabaseName() == "IX_flujo_reglas_negocio_proceso_tipo_etapa_activo_prioridad");
+        Assert.Contains(campo.GetIndexes(), i => i.GetDatabaseName() == "IX_campo_regla_activo_codigo");
+        Assert.Contains(campo.GetCheckConstraints(), c => c.Name == "CK_campo_regla_tipo_valor");
+        Assert.Contains(operadorCampo.GetCheckConstraints(), c => c.Name == "CK_campo_regla_operador_codigo");
         Assert.Contains(flujo.GetCheckConstraints(), c => c.Name == "CK_flujo_reglas_etapa");
         Assert.Contains(flujo.GetCheckConstraints(), c => c.Name == "CK_flujo_reglas_prioridad");
         Assert.Contains(regla.GetCheckConstraints(), c => c.Name == "CK_regla_tipo_regla");

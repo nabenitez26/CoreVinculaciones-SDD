@@ -51,3 +51,11 @@ Una definición ACTIVA inválida es error de configuración, no INDETERMINADO. R
 ## C-012 Tipos incompatibles en contexto
 
 Un campo conocido de `contexto` presente con un tipo JSON incompatible se retorna como HTTP 422 ProblemDetails con `errors[].codigo = CONTEXTO_TIPO_INVALIDO` y `errors[].campo` con la ruta del campo. Si el campo está ausente o es `null`, se aplica C-007: la regla que lo requiera retorna `INDETERMINADO`.
+
+## C-013 Catálogo dinámico de campos
+
+Los campos, tipos y operadores permitidos se administran en las tablas `campo_regla` y `campo_regla_operador` de Azure SQL mediante un proceso externo. RulesValidator carga el catálogo activo una vez por evaluación; no lo cachea entre evaluaciones. El catálogo inicial de la migración cubre los campos y operadores requeridos por RV-001, RV-101 y RV-002.
+
+## C-014 Alcance de globales y tipo de plan
+
+Las reglas de GLOBAL se limitan únicamente por proceso y aplican en cualquier negocio, etapa y `tipo_plan_id` de ese proceso. Los flujos GLOBAL se almacenan con `etapa = NULL` y `tipo_plan_id = NULL`. Los flujos específicos se seleccionan por negocio, proceso y etapa; cuando el proceso es VINCULACION también deben coincidir con `tipo_plan_id`. Este campo es varchar de máximo 10 caracteres y obligatorio en requests de VINCULACION; se omite para otros procesos.

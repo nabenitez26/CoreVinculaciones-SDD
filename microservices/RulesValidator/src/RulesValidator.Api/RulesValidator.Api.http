@@ -8,6 +8,7 @@ X-Correlation-ID: prueba-rules-validator-001
 {
   "negocio": "PENSIONADOS",
   "proceso": "VINCULACION",
+  "tipo_plan_id": "PENSIONADO",
   "etapa": 4,
   "fechaEvaluacion": "2026-11-18T23:00:00Z",
   "contexto": {

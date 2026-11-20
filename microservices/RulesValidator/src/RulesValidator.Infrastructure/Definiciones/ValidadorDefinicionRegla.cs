@@ -8,29 +8,41 @@ public sealed class ValidadorDefinicionRegla : IValidadorDefinicionRegla
 {
     private readonly ValidadorEsquemaDefinicion _validadorEsquema = new();
 
-    public ResultadoValidacionDefinicion Validar(string definicionJson)
+    public Task<ResultadoValidacionDefinicion> ValidarAsync(
+        string definicionJson,
+        IReadOnlyList<CampoReglaPermitido> camposPermitidos,
+        CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var validacion = _validadorEsquema.Validar(definicionJson);
         if (!validacion.EsValido)
         {
-            return ResultadoValidacionDefinicion.Invalida(validacion.Errores);
+            return Task.FromResult(ResultadoValidacionDefinicion.Invalida(validacion.Errores));
         }
 
         try
         {
             using var documento = JsonDocument.Parse(definicionJson);
             var raiz = documento.RootElement;
+            var campos = camposPermitidos.ToDictionary(campo => campo.Codigo, StringComparer.Ordinal);
+            var erroresCatalogo = new CatalogoAllowListReglas().Validar(raiz, campos);
+            if (erroresCatalogo.Count > 0)
+            {
+                return Task.FromResult(ResultadoValidacionDefinicion.Invalida(erroresCatalogo));
+            }
+
             var nodoPrincipal = ConvertirNodoRaiz(raiz);
             var aplicabilidad = raiz.TryGetProperty("aplicabilidad", out var nodoAplicabilidad)
                 ? ConvertirNodo(nodoAplicabilidad)
                 : null;
 
-            return ResultadoValidacionDefinicion.Valida(
-                new DefinicionRegla(raiz.GetProperty("versionEsquema").GetString()!, nodoPrincipal, aplicabilidad));
+            return Task.FromResult(ResultadoValidacionDefinicion.Valida(
+                new DefinicionRegla(raiz.GetProperty("versionEsquema").GetString()!, nodoPrincipal, aplicabilidad)));
         }
         catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException or OverflowException or ArgumentException)
         {
-            return ResultadoValidacionDefinicion.Invalida(["La definición no se pudo convertir al modelo neutral."]);
+            return Task.FromResult(ResultadoValidacionDefinicion.Invalida(["La definición no se pudo convertir al modelo neutral."]));
         }
     }
 

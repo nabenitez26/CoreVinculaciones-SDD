@@ -101,23 +101,13 @@ public static class EvaluacionesReglasEndpoints
                 string.Join(" ", erroresRequest.Select(error => error.Mensaje)));
         }
 
-        var erroresContexto = ValidarTiposContexto(solicitud.Contexto!.Value);
-        if (erroresContexto.Count > 0)
-        {
-            return ApiProblemDetails.Crear(
-                context,
-                StatusCodes.Status422UnprocessableEntity,
-                "Solicitud no procesable",
-                "Uno o más campos del contexto tienen un tipo incompatible.",
-                erroresContexto);
-        }
-
         var comando = new EvaluarReglasCommand(
             solicitud.Negocio!,
             solicitud.Proceso!,
+            solicitud.TipoPlanId,
             solicitud.Etapa!.Value,
             solicitud.FechaEvaluacion,
-            solicitud.Contexto.Value,
+            solicitud.Contexto!.Value,
             idCorrelacion,
             Activity.Current?.Id ?? context.TraceIdentifier);
         var resultado = await handler.HandleAsync(comando, cancellationToken);
@@ -147,6 +137,23 @@ public static class EvaluacionesReglasEndpoints
             errores.Add(new("SOLICITUD_INVALIDA", "El proceso supera la longitud permitida.", "proceso"));
         }
 
+        if (solicitud.TipoPlanId is { Length: > 10 })
+        {
+            errores.Add(new("SOLICITUD_INVALIDA", "tipo_plan_id supera la longitud máxima de 10 caracteres.", "tipo_plan_id"));
+        }
+
+        if (string.Equals(solicitud.Proceso, "VINCULACION", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(solicitud.TipoPlanId))
+            {
+                errores.Add(new("SOLICITUD_INVALIDA", "tipo_plan_id es obligatorio para el proceso VINCULACION.", "tipo_plan_id"));
+            }
+        }
+        else if (solicitud.TipoPlanId is not null)
+        {
+            errores.Add(new("SOLICITUD_INVALIDA", "tipo_plan_id solo se permite para el proceso VINCULACION.", "tipo_plan_id"));
+        }
+
         if (solicitud.Etapa is null or < 1)
         {
             errores.Add(new("SOLICITUD_INVALIDA", "La etapa debe ser mayor que cero.", "etapa"));
@@ -163,59 +170,6 @@ public static class EvaluacionesReglasEndpoints
         }
 
         return errores;
-    }
-
-    private static List<ErrorProblemaResponse> ValidarTiposContexto(JsonElement contexto)
-    {
-        var errores = new List<ErrorProblemaResponse>();
-        ValidarObjetoAnidado(contexto, "pension", errores);
-        ValidarObjetoAnidado(contexto, "plan", errores);
-
-        if (contexto.TryGetProperty("pension", out var pension) && pension.ValueKind == JsonValueKind.Object)
-        {
-            ValidarTipoPropiedad(pension, "tipo", JsonValueKind.String, "pension.tipo", errores);
-            ValidarTipoPropiedad(pension, "mesadaEnSmlmv", JsonValueKind.Number, "pension.mesadaEnSmlmv", errores);
-        }
-
-        if (contexto.TryGetProperty("plan", out var plan) && plan.ValueKind == JsonValueKind.Object)
-        {
-            ValidarTipoPropiedad(plan, "codigo", JsonValueKind.String, "plan.codigo", errores);
-        }
-
-        return errores;
-    }
-
-    private static void ValidarObjetoAnidado(
-        JsonElement contexto,
-        string propiedad,
-        ICollection<ErrorProblemaResponse> errores)
-    {
-        if (contexto.TryGetProperty(propiedad, out var valor)
-            && valor.ValueKind is not (JsonValueKind.Object or JsonValueKind.Null))
-        {
-            errores.Add(new(
-                "CONTEXTO_TIPO_INVALIDO",
-                $"El campo '{propiedad}' debe ser un objeto.",
-                propiedad));
-        }
-    }
-
-    private static void ValidarTipoPropiedad(
-        JsonElement objeto,
-        string propiedad,
-        JsonValueKind tipoEsperado,
-        string campo,
-        ICollection<ErrorProblemaResponse> errores)
-    {
-        if (objeto.TryGetProperty(propiedad, out var valor)
-            && valor.ValueKind is not (JsonValueKind.Null)
-            && valor.ValueKind != tipoEsperado)
-        {
-            errores.Add(new(
-                "CONTEXTO_TIPO_INVALIDO",
-                $"El campo '{campo}' tiene un tipo incompatible.",
-                campo));
-        }
     }
 
     private static EvaluacionReglasResponse MapearRespuesta(EvaluarReglasResultado resultado) =>
