@@ -25,7 +25,7 @@ public static class EvaluacionesReglasEndpoints
 
     public static IEndpointRouteBuilder MapEvaluacionesReglas(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/v1/evaluaciones-reglas", EvaluarAsync)
+        endpoints.MapPost("/api/v1/evaluar-reglas", EvaluarAsync)
             .WithName("EvaluarReglas")
             .WithSummary("Evalúa las reglas de negocio aplicables.")
             .WithDescription("Evalúa las reglas activas y vigentes del negocio, proceso y etapa indicados.")
@@ -139,19 +139,19 @@ public static class EvaluacionesReglasEndpoints
 
         if (solicitud.TipoPlanId is { Length: > 10 })
         {
-            errores.Add(new("SOLICITUD_INVALIDA", "tipo_plan_id supera la longitud máxima de 10 caracteres.", "tipo_plan_id"));
+            errores.Add(new("SOLICITUD_INVALIDA", "tipoPlanId supera la longitud máxima de 10 caracteres.", "tipoPlanId"));
         }
 
         if (string.Equals(solicitud.Proceso, "VINCULACION", StringComparison.OrdinalIgnoreCase))
         {
             if (string.IsNullOrWhiteSpace(solicitud.TipoPlanId))
             {
-                errores.Add(new("SOLICITUD_INVALIDA", "tipo_plan_id es obligatorio para el proceso VINCULACION.", "tipo_plan_id"));
+                errores.Add(new("SOLICITUD_INVALIDA", "tipoPlanId es obligatorio para el proceso VINCULACION.", "tipoPlanId"));
             }
         }
         else if (solicitud.TipoPlanId is not null)
         {
-            errores.Add(new("SOLICITUD_INVALIDA", "tipo_plan_id solo se permite para el proceso VINCULACION.", "tipo_plan_id"));
+            errores.Add(new("SOLICITUD_INVALIDA", "tipoPlanId solo se permite para el proceso VINCULACION.", "tipoPlanId"));
         }
 
         if (solicitud.Etapa is null or < 1)

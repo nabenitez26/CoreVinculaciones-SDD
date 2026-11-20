@@ -50,6 +50,25 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                         .HasColumnType("datetime2")
                         .HasColumnName("fecha_modificacion");
 
+                    b.Property<string>("NegocioCodigo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)")
+                        .HasColumnName("negocio_codigo");
+
+                    b.Property<string>("Proceso")
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("proceso");
+
+                    b.Property<string>("TipoPlanId")
+                        .HasMaxLength(10)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("tipo_plan_id");
+
                     b.Property<string>("TipoValor")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -73,13 +92,15 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                     b.HasKey("CampoReglaId")
                         .HasName("PK_campo_regla");
 
-                    b.HasAlternateKey("Codigo")
-                        .HasName("UK_campo_regla_codigo");
+                    b.HasIndex("Activo", "NegocioCodigo", "Proceso", "TipoPlanId")
+                        .HasDatabaseName("IX_campo_regla_scope_activo");
 
-                    b.HasIndex("Activo", "Codigo")
-                        .HasDatabaseName("IX_campo_regla_activo_codigo");
+                    b.HasIndex("NegocioCodigo", "Proceso", "TipoPlanId", "Codigo")
+                        .IsUnique()
+                        .HasDatabaseName("UX_campo_regla_scope_codigo")
+                        .HasFilter("[negocio_codigo] IS NOT NULL");
 
-                    b.ToTable("campo_regla", null, t =>
+                    b.ToTable("campo_regla", "reglas", t =>
                         {
                             t.HasCheckConstraint("CK_campo_regla_tipo_valor", "[tipo_valor] IN ('TEXTO', 'NUMERO', 'BOOLEANO')");
                         });
@@ -100,7 +121,7 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                     b.HasKey("CampoReglaId", "Operador")
                         .HasName("PK_campo_regla_operador");
 
-                    b.ToTable("campo_regla_operador", null, t =>
+                    b.ToTable("campo_regla_operador", "reglas", t =>
                         {
                             t.HasCheckConstraint("CK_campo_regla_operador_codigo", "[operador] IN ('IGUAL', 'DIFERENTE', 'MAYOR', 'MAYOR_IGUAL', 'MENOR', 'MENOR_IGUAL', 'EN', 'NO_EN')");
                         });
@@ -190,7 +211,7 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
 
                     b.HasIndex("NegocioId");
 
-                    b.ToTable("ejecucion_regla", null, t =>
+                    b.ToTable("ejecucion_regla", "reglas", t =>
                         {
                             t.HasCheckConstraint("CK_ejecucion_regla_duracion_ms", "[duracion_ms] >= 0");
 
@@ -284,7 +305,7 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                     b.HasIndex("NegocioId", "Proceso", "TipoPlanId", "Etapa", "Activo", "Prioridad")
                         .HasDatabaseName("IX_flujo_reglas_negocio_proceso_tipo_etapa_activo_prioridad");
 
-                    b.ToTable("flujo_reglas", null, t =>
+                    b.ToTable("flujo_reglas", "reglas", t =>
                         {
                             t.HasCheckConstraint("CK_flujo_reglas_etapa", "[etapa] IS NULL OR [etapa] > 0");
 
@@ -352,7 +373,7 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                     b.HasAlternateKey("Codigo")
                         .HasName("UK_negocio_codigo");
 
-                    b.ToTable("negocio", (string)null);
+                    b.ToTable("negocio", "reglas");
                 });
 
             modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.ReglaEntity", b =>
@@ -420,7 +441,7 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                     b.HasAlternateKey("FlujoReglasId", "Codigo")
                         .HasName("UK_regla_flujo_codigo");
 
-                    b.ToTable("regla", null, t =>
+                    b.ToTable("regla", "reglas", t =>
                         {
                             t.HasCheckConstraint("CK_regla_prioridad", "[prioridad] >= 0");
 
@@ -517,7 +538,7 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                     b.HasAlternateKey("ReglaId", "Version")
                         .HasName("UK_version_regla_regla_version");
 
-                    b.ToTable("version_regla", null, t =>
+                    b.ToTable("version_regla", "reglas", t =>
                         {
                             t.HasCheckConstraint("CK_version_regla_definicion_json", "ISJSON([definicion_json]) = 1");
 

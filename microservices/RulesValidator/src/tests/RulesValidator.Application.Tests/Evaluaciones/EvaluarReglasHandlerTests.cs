@@ -32,7 +32,11 @@ internal sealed class RepositorioEjecucionesFalso : IRepositorioEjecucionesRegla
 
 internal sealed class RepositorioCatalogoCamposFalso : IRepositorioCatalogoCampos
 {
-    public Task<IReadOnlyList<CampoReglaPermitido>> ObtenerCamposActivosAsync(CancellationToken cancellationToken) =>
+    public Task<IReadOnlyList<CampoReglaPermitido>> ObtenerCamposActivosAsync(
+        string negocio,
+        string proceso,
+        string? tipoPlanId,
+        CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<CampoReglaPermitido>>(
         [
             new("pension.tipo", TipoValorCampo.Texto, new HashSet<OperadorComparacion>

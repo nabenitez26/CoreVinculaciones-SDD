@@ -45,7 +45,11 @@ public sealed class EvaluarReglasHandler(
             throw new ConfiguracionReglasNoEncontradaException(command.Negocio, command.Proceso, command.Etapa);
         }
 
-        var camposPermitidos = await repositorioCatalogoCampos.ObtenerCamposActivosAsync(cancellationToken);
+        var camposPermitidos = await repositorioCatalogoCampos.ObtenerCamposActivosAsync(
+            command.Negocio,
+            command.Proceso,
+            command.TipoPlanId,
+            cancellationToken);
         var camposContextoInvalidos = ValidarTiposContexto(command.Contexto, camposPermitidos);
         if (camposContextoInvalidos.Count > 0)
         {
@@ -193,26 +197,8 @@ public sealed class EvaluarReglasHandler(
 
     private static (bool Existe, JsonElement Valor, bool TipoIntermedioInvalido) BuscarValor(JsonElement contexto, string codigo)
     {
-        var actual = contexto;
-        var segmentos = codigo.Split('.');
-        for (var indice = 0; indice < segmentos.Length; indice++)
-        {
-            if (actual.ValueKind == JsonValueKind.Null)
-            {
-                return (false, default, false);
-            }
-
-            if (actual.ValueKind != JsonValueKind.Object)
-            {
-                return (true, default, true);
-            }
-
-            if (!actual.TryGetProperty(segmentos[indice], out actual))
-            {
-                return (false, default, false);
-            }
-        }
-
-        return (true, actual, false);
+        return contexto.TryGetProperty(codigo, out var valor)
+            ? (true, valor, false)
+            : (false, default, false);
     }
 }

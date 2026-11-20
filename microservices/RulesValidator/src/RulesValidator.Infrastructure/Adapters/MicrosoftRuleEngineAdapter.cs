@@ -215,23 +215,9 @@ public sealed class MicrosoftRuleEngineAdapter(ExpressionBuilder expressionBuild
 
     private static ValorContexto LeerValor(JsonElement contexto, CampoReglaPermitido campo)
     {
-        var actual = contexto;
-        foreach (var segmento in campo.Codigo.Split('.'))
+        if (!contexto.TryGetProperty(campo.Codigo, out var actual))
         {
-            if (actual.ValueKind == JsonValueKind.Null)
-            {
-                return new(null, false);
-            }
-
-            if (actual.ValueKind != JsonValueKind.Object)
-            {
-                return new(null, true);
-            }
-
-            if (!actual.TryGetProperty(segmento, out actual))
-            {
-                return new(null, false);
-            }
+            return new(null, false);
         }
 
         if (actual.ValueKind == JsonValueKind.Null)

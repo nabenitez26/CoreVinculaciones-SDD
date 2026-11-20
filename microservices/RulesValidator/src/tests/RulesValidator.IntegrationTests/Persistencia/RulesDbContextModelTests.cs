@@ -45,7 +45,6 @@ public sealed class RulesDbContextModelTests
         Assert.Contains(negocio.GetKeys(), k => k.IsPrimaryKey() && k.GetName() == "PK_negocio");
         Assert.Contains(negocio.GetKeys(), k => !k.IsPrimaryKey() && k.GetName() == "UK_negocio_codigo");
         Assert.Contains(campo.GetKeys(), k => k.IsPrimaryKey() && k.GetName() == "PK_campo_regla");
-        Assert.Contains(campo.GetKeys(), k => !k.IsPrimaryKey() && k.GetName() == "UK_campo_regla_codigo");
         Assert.Contains(operadorCampo.GetKeys(), k => k.IsPrimaryKey() && k.GetName() == "PK_campo_regla_operador");
         Assert.Contains(flujo.GetKeys(), k => !k.IsPrimaryKey() && k.GetName() == "UK_flujo_reglas_codigo");
         Assert.Contains(regla.GetKeys(), k => !k.IsPrimaryKey() && k.GetName() == "UK_regla_flujo_codigo");
@@ -70,7 +69,10 @@ public sealed class RulesDbContextModelTests
         var ejecucion = contexto.Model.FindEntityType(typeof(EjecucionReglaEntity))!;
 
         Assert.Contains(flujo.GetIndexes(), i => i.GetDatabaseName() == "IX_flujo_reglas_negocio_proceso_tipo_etapa_activo_prioridad");
-        Assert.Contains(campo.GetIndexes(), i => i.GetDatabaseName() == "IX_campo_regla_activo_codigo");
+        Assert.Contains(campo.GetIndexes(), i => i.GetDatabaseName() == "UX_campo_regla_scope_codigo" && i.IsUnique);
+        Assert.Contains(campo.GetIndexes(), i => i.GetDatabaseName() == "IX_campo_regla_scope_activo");
+        Assert.True(flujo.FindProperty(nameof(FlujoReglasEntity.Etapa))!.IsNullable);
+        Assert.False(ejecucion.FindProperty(nameof(EjecucionReglaEntity.Etapa))!.IsNullable);
         Assert.Contains(campo.GetCheckConstraints(), c => c.Name == "CK_campo_regla_tipo_valor");
         Assert.Contains(operadorCampo.GetCheckConstraints(), c => c.Name == "CK_campo_regla_operador_codigo");
         Assert.Contains(flujo.GetCheckConstraints(), c => c.Name == "CK_flujo_reglas_etapa");

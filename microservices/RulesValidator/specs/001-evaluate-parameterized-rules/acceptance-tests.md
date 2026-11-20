@@ -41,14 +41,14 @@ La definición de RV-002 expresa `plan.codigo = TP-01` en el nodo raíz opcional
 
 ## 5. Reglas globales
 
-Dado negocio PENSIONADOS, proceso VINCULACION, tipo_plan_id PENSIONADO y etapa 4, se recuperan primero las reglas GLOBAL del proceso sin filtrar etapa ni tipo, y luego las reglas de PENSIONADOS que coinciden con etapa y tipo_plan_id. Una regla GLOBAL inactiva no se evalúa.
+Dado negocio SALUD, proceso VINCULACION, `tipoPlanId` TP-01 y etapa 4, se recuperan primero las reglas GLOBAL del proceso sin filtrar etapa ni tipo, y luego las reglas de SALUD que coinciden con etapa y `tipo_plan_id`. Una regla GLOBAL inactiva no se evalúa.
 
-## 5.1 tipo_plan_id
+## 5.1 tipoPlanId
 
-- Proceso VINCULACION sin `tipo_plan_id` -> 400 ProblemDetails.
-- Proceso VINCULACION con `tipo_plan_id` de más de 10 caracteres -> 400 ProblemDetails.
-- Proceso distinto de VINCULACION con `tipo_plan_id` -> 400 ProblemDetails.
-- Proceso distinto de VINCULACION puede omitir `tipo_plan_id`.
+- Proceso VINCULACION sin `tipoPlanId` -> 400 ProblemDetails.
+- Proceso VINCULACION con `tipoPlanId` de más de 10 caracteres -> 400 ProblemDetails.
+- Proceso distinto de VINCULACION con `tipoPlanId` -> 400 ProblemDetails.
+- Proceso distinto de VINCULACION omite `tipoPlanId`.
 
 ## 6. Vigencia
 

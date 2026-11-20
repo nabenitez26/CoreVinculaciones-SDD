@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
@@ -10,6 +9,8 @@ using RulesValidator.Api.Middleware;
 using RulesValidator.Application.Evaluaciones;
 using RulesValidator.Application.Observabilidad;
 using RulesValidator.Infrastructure;
+using Scalar.AspNetCore;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("RulesDbContext");
@@ -54,7 +55,11 @@ app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
-	app.MapOpenApi();
+    app.MapOpenApi();
+    app.MapScalarApiReference(options => options.WithTitle("Customer Api")
+     .WithTheme(ScalarTheme.Kepler)
+     .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient)
+    );
 }
 
 app.MapEvaluacionesReglas();

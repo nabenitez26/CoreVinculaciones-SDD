@@ -3,6 +3,9 @@ namespace RulesValidator.Infrastructure.Persistencia.Entidades;
 public sealed class CampoReglaEntity
 {
     public long CampoReglaId { get; set; }
+    public string NegocioCodigo { get; set; } = null!;
+    public string? Proceso { get; set; }
+    public string? TipoPlanId { get; set; }
     public string Codigo { get; set; } = null!;
     public string TipoValor { get; set; } = null!;
     public bool Activo { get; set; }
@@ -42,7 +45,7 @@ public sealed class FlujoReglasEntity
     public string Codigo { get; set; } = null!;
     public string Nombre { get; set; } = null!;
     public string Proceso { get; set; } = null!;
-    public int Etapa { get; set; }
+    public int? Etapa { get; set; }
     public string? TipoPlanId { get; set; }
     public int Prioridad { get; set; }
     public bool Activo { get; set; }

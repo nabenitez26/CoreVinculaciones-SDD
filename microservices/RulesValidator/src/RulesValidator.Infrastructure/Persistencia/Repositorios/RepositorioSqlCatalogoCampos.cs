@@ -8,16 +8,34 @@ namespace RulesValidator.Infrastructure.Persistencia.Repositorios;
 
 public sealed partial class RepositorioSqlCatalogoCampos(RulesDbContext contexto) : IRepositorioCatalogoCampos
 {
-    public async Task<IReadOnlyList<CampoReglaPermitido>> ObtenerCamposActivosAsync(CancellationToken cancellationToken)
+    private const string CodigoNegocioGlobal = "GLOBAL";
+
+    public async Task<IReadOnlyList<CampoReglaPermitido>> ObtenerCamposActivosAsync(
+        string negocio,
+        string proceso,
+        string? tipoPlanId,
+        CancellationToken cancellationToken)
     {
         var entidades = await contexto.CamposRegla
             .AsNoTracking()
-            .Where(campo => campo.Activo)
+            .Where(campo => (campo.NegocioCodigo == CodigoNegocioGlobal || campo.NegocioCodigo == negocio)
+                && (campo.Proceso == null || campo.Proceso == proceso)
+                && (campo.TipoPlanId == null || campo.TipoPlanId == tipoPlanId))
             .Include(campo => campo.Operadores)
-            .OrderBy(campo => campo.Codigo)
             .ToListAsync(cancellationToken);
 
-        return entidades.Select(campo =>
+        var seleccionados = entidades
+            .GroupBy(campo => campo.Codigo, StringComparer.Ordinal)
+            .Select(grupo => grupo
+                .OrderByDescending(campo => !string.Equals(negocio, CodigoNegocioGlobal, StringComparison.Ordinal)
+                    && campo.NegocioCodigo == negocio)
+                .ThenByDescending(campo => campo.Proceso == proceso)
+                .ThenByDescending(campo => tipoPlanId is not null && campo.TipoPlanId == tipoPlanId)
+                .First())
+                .Where(campo => campo.Activo)
+            .OrderBy(campo => campo.Codigo);
+
+        return seleccionados.Select(campo =>
         {
             if (!CodigoCampoValido().IsMatch(campo.Codigo))
             {

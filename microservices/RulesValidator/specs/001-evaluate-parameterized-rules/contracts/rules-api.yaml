@@ -68,16 +68,11 @@ components:
           type: string
           maxLength: 100
           example: VINCULACION
-        tipo_plan_id:
+        tipoPlanId:
           type: string
           maxLength: 10
-          description: Obligatorio cuando proceso es VINCULACION; se usa como criterio de selección de reglas.
-          example: PENSIONADO
-        tipo_plan_id:
-          type: string
-          maxLength: 10
-          description: Obligatorio cuando proceso es VINCULACION; se omite para otros procesos.
-          example: PENSIONADO
+          description: Código del plan que corresponde al tipo de vinculación; obligatorio cuando proceso es VINCULACION.
+          example: TP-01
         etapa:
           type: integer
           format: int32
@@ -92,11 +87,12 @@ components:
           type: object
           additionalProperties: true
           example:
-            pension:
-              tipo: Vejez
-              mesadaEnSmlmv: 1.4
-            plan:
-              codigo: TP-01
+            pension.tipo: Vejez
+            pension.mesadaEnSmlmv: 1.4
+            plan.codigo: TP-01
+            persona.genero: M
+            persona.edad: 64
+            persona.tipoDocumento: CC
     RespuestaEvaluacionReglas:
       type: object
       required: [idEvaluacion, idCorrelacion, duracionMs, resultadoGeneral, flujosReglas, resultados]

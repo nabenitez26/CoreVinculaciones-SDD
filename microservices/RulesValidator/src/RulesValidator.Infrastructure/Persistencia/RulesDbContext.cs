@@ -27,10 +27,13 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
     private static void ConfigurarCampoRegla(ModelBuilder modelBuilder)
     {
         var entidad = modelBuilder.Entity<CampoReglaEntity>();
-        entidad.ToTable("campo_regla", tabla =>
+        entidad.ToTable("campo_regla", "reglas", tabla =>
             tabla.HasCheckConstraint("CK_campo_regla_tipo_valor", "[tipo_valor] IN ('TEXTO', 'NUMERO', 'BOOLEANO')"));
         entidad.HasKey(e => e.CampoReglaId).HasName("PK_campo_regla");
         entidad.Property(e => e.CampoReglaId).HasColumnName("campo_regla_id").UseIdentityColumn();
+        entidad.Property(e => e.NegocioCodigo).HasColumnName("negocio_codigo").HasColumnType("varchar(50)").HasMaxLength(50).IsUnicode(false).IsRequired();
+        entidad.Property(e => e.Proceso).HasColumnName("proceso").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false);
+        entidad.Property(e => e.TipoPlanId).HasColumnName("tipo_plan_id").HasColumnType("varchar(10)").HasMaxLength(10).IsUnicode(false);
         entidad.Property(e => e.Codigo).HasColumnName("codigo").HasColumnType("varchar(150)").HasMaxLength(150).IsUnicode(false).IsRequired();
         entidad.Property(e => e.TipoValor).HasColumnName("tipo_valor").HasColumnType("varchar(20)").HasMaxLength(20).IsUnicode(false).IsRequired();
         entidad.Property(e => e.Activo).HasColumnName("activo").IsRequired();
@@ -38,14 +41,18 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
         entidad.Property(e => e.UsuarioCreacion).HasColumnName("usuario_creacion").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false).IsRequired();
         entidad.Property(e => e.FechaModificacion).HasColumnName("fecha_modificacion").HasColumnType("datetime2");
         entidad.Property(e => e.UsuarioModificacion).HasColumnName("usuario_modificacion").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false);
-        entidad.HasAlternateKey(e => e.Codigo).HasName("UK_campo_regla_codigo");
-        entidad.HasIndex(e => new { e.Activo, e.Codigo }).HasDatabaseName("IX_campo_regla_activo_codigo");
+        entidad.HasIndex(e => new { e.NegocioCodigo, e.Proceso, e.TipoPlanId, e.Codigo })
+            .IsUnique()
+            .HasFilter("[negocio_codigo] IS NOT NULL")
+            .HasDatabaseName("UX_campo_regla_scope_codigo");
+        entidad.HasIndex(e => new { e.Activo, e.NegocioCodigo, e.Proceso, e.TipoPlanId })
+            .HasDatabaseName("IX_campo_regla_scope_activo");
     }
 
     private static void ConfigurarCampoReglaOperador(ModelBuilder modelBuilder)
     {
         var entidad = modelBuilder.Entity<CampoReglaOperadorEntity>();
-        entidad.ToTable("campo_regla_operador", tabla =>
+        entidad.ToTable("campo_regla_operador", "reglas", tabla =>
             tabla.HasCheckConstraint("CK_campo_regla_operador_codigo", "[operador] IN ('IGUAL', 'DIFERENTE', 'MAYOR', 'MAYOR_IGUAL', 'MENOR', 'MENOR_IGUAL', 'EN', 'NO_EN')"));
         entidad.HasKey(e => new { e.CampoReglaId, e.Operador }).HasName("PK_campo_regla_operador");
         entidad.Property(e => e.CampoReglaId).HasColumnName("campo_regla_id");
@@ -60,7 +67,7 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
     private static void ConfigurarNegocio(ModelBuilder modelBuilder)
     {
         var entidad = modelBuilder.Entity<NegocioEntity>();
-        entidad.ToTable("negocio");
+        entidad.ToTable("negocio", "reglas");
         entidad.HasKey(e => e.NegocioId).HasName("PK_negocio");
         entidad.Property(e => e.NegocioId).HasColumnName("negocio_id").UseIdentityColumn();
         entidad.Property(e => e.Codigo).HasColumnName("codigo").HasColumnType("varchar(50)").HasMaxLength(50).IsUnicode(false).IsRequired();
@@ -77,7 +84,7 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
     private static void ConfigurarFlujoReglas(ModelBuilder modelBuilder)
     {
         var entidad = modelBuilder.Entity<FlujoReglasEntity>();
-        entidad.ToTable("flujo_reglas", tabla =>
+        entidad.ToTable("flujo_reglas", "reglas", tabla =>
         {
             tabla.HasCheckConstraint("CK_flujo_reglas_etapa", "[etapa] IS NULL OR [etapa] > 0");
             tabla.HasCheckConstraint("CK_flujo_reglas_prioridad", "[prioridad] >= 0");
@@ -88,7 +95,7 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
         entidad.Property(e => e.Codigo).HasColumnName("codigo").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false).IsRequired();
         entidad.Property(e => e.Nombre).HasColumnName("nombre").HasColumnType("varchar(200)").HasMaxLength(200).IsUnicode(false).IsRequired();
         entidad.Property(e => e.Proceso).HasColumnName("proceso").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false).IsRequired();
-        entidad.Property(e => e.Etapa).HasColumnName("etapa").IsRequired();
+        entidad.Property(e => e.Etapa).HasColumnName("etapa");
         entidad.Property(e => e.TipoPlanId).HasColumnName("tipo_plan_id").HasColumnType("varchar(10)").HasMaxLength(10).IsUnicode(false);
         entidad.Property(e => e.Prioridad).HasColumnName("prioridad").IsRequired();
         entidad.Property(e => e.Activo).HasColumnName("activo").IsRequired();
@@ -109,7 +116,7 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
     private static void ConfigurarRegla(ModelBuilder modelBuilder)
     {
         var entidad = modelBuilder.Entity<ReglaEntity>();
-        entidad.ToTable("regla", tabla =>
+        entidad.ToTable("regla", "reglas", tabla =>
         {
             tabla.HasCheckConstraint("CK_regla_tipo_regla", "[tipo_regla] IN ('PARAMETRIZABLE', 'ESPECIALIZADA')");
             tabla.HasCheckConstraint("CK_regla_prioridad", "[prioridad] >= 0");
@@ -136,7 +143,7 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
     private static void ConfigurarVersionRegla(ModelBuilder modelBuilder)
     {
         var entidad = modelBuilder.Entity<VersionReglaEntity>();
-        entidad.ToTable("version_regla", tabla =>
+        entidad.ToTable("version_regla", "reglas", tabla =>
         {
             tabla.HasCheckConstraint("CK_version_regla_estado", "[estado] IN ('BORRADOR', 'EN_REVISION', 'APROBADA', 'ACTIVA', 'INACTIVA')");
             tabla.HasCheckConstraint("CK_version_regla_severidad", "[severidad] IN ('INFORMATIVA', 'ADVERTENCIA', 'BLOQUEANTE')");
@@ -170,7 +177,7 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
     private static void ConfigurarEjecucionRegla(ModelBuilder modelBuilder)
     {
         var entidad = modelBuilder.Entity<EjecucionReglaEntity>();
-        entidad.ToTable("ejecucion_regla", tabla =>
+        entidad.ToTable("ejecucion_regla", "reglas", tabla =>
         {
             tabla.HasCheckConstraint("CK_ejecucion_regla_resultado_general", "[resultado_general] IN ('CUMPLE', 'NO_CUMPLE', 'INDETERMINADO')");
             tabla.HasCheckConstraint("CK_ejecucion_regla_duracion_ms", "[duracion_ms] >= 0");

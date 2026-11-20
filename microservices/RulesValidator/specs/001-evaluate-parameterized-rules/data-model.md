@@ -11,19 +11,24 @@
 ## 2. Relaciones
 
 ```text
-negocio 1---N flujo_reglas 1---N regla 1---N version_regla
-negocio 1---N ejecucion_regla
-campo_regla 1---N campo_regla_operador
+reglas.negocio 1---N reglas.flujo_reglas 1---N reglas.regla 1---N reglas.version_regla
+reglas.negocio 1---N reglas.ejecucion_regla
+reglas.campo_regla 1---N reglas.campo_regla_operador
 ```
 
-## 3. campo_regla
+Todas las tablas de esta feature pertenecen al esquema SQL `reglas`.
+
+## 3. reglas.campo_regla
 
 Catálogo operativo de rutas JSON autorizadas. Lo administra un proceso externo a Feature 001; se consulta en cada evaluación y no se mantiene una allow-list de campos en el código.
 
 | Columna | Tipo | Nulo | Restricción |
 |---|---|---:|---|
 | campo_regla_id | bigint identity | No | PK |
-| codigo | varchar(150) | No | UK; ruta JSON segmentada por punto |
+| negocio_codigo | varchar(50) | No | `GLOBAL` o código del negocio |
+| proceso | varchar(100) | Sí | NULL significa cualquier proceso |
+| tipo_plan_id | varchar(10) | Sí | NULL significa cualquier tipo de plan |
+| codigo | varchar(150) | No | Ruta JSON plana; puede contener puntos |
 | tipo_valor | varchar(20) | No | CHECK TEXTO, NUMERO o BOOLEANO |
 | activo | bit | No | |
 | fecha_creacion | datetime2 | No | |
@@ -31,9 +36,11 @@ Catálogo operativo de rutas JSON autorizadas. Lo administra un proceso externo 
 | fecha_modificacion | datetime2 | Sí | |
 | usuario_modificacion | varchar(100) | Sí | |
 
-El código usa segmentos seguros `[A-Za-z_][A-Za-z0-9_]*` separados por punto. La migración inicial registra los campos usados por RV-001, RV-101 y RV-002.
+UK: `(negocio_codigo, proceso, tipo_plan_id, codigo)`. El código usa segmentos seguros `[A-Za-z_][A-Za-z0-9_]*` separados por punto y se resuelve como clave JSON literal.
 
-## 4. campo_regla_operador
+El catálogo se carga para `GLOBAL` y el scope específico de negocio/proceso/tipo. Una entrada específica reemplaza la entrada GLOBAL con el mismo `codigo`; dentro de cada negocio, un proceso exacto reemplaza uno general y un `tipo_plan_id` exacto reemplaza el comodín NULL. La selección de scope ocurre antes del filtro `activo`, por lo que un registro específico inactivo deshabilita el fallback global. La migración inicial registra los campos usados por RV-001, RV-101 y RV-002 en el scope `PENSIONADOS` / `VINCULACION`.
+
+## 4. reglas.campo_regla_operador
 
 | Columna | Tipo | Nulo | Restricción |
 |---|---|---:|---|
@@ -42,7 +49,7 @@ El código usa segmentos seguros `[A-Za-z_][A-Za-z0-9_]*` separados por punto. L
 
 Las tablas de catálogo son la fuente de verdad para campos, tipos y combinaciones campo/operador habilitados. El servicio lee el conjunto activo una vez por evaluación; cambios efectuados en SQL aplican en la siguiente evaluación.
 
-## 5. negocio
+## 5. reglas.negocio
 
 | Columna | Tipo | Nulo | Restricción |
 |---|---|---:|---|
@@ -58,7 +65,7 @@ Las tablas de catálogo son la fuente de verdad para campos, tipos y combinacion
 
 Debe existir `codigo = GLOBAL`.
 
-## 6. flujo_reglas
+## 6. reglas.flujo_reglas
 
 | Columna | Tipo | Nulo | Restricción |
 |---|---|---:|---|
@@ -80,7 +87,7 @@ Debe existir `codigo = GLOBAL`.
 
 Los flujos GLOBAL se limitan únicamente por `proceso`; usan `etapa = NULL` y `tipo_plan_id = NULL`. Los flujos específicos de negocio se seleccionan por proceso y etapa; para `VINCULACION`, además por `tipo_plan_id`.
 
-## 7. regla
+## 7. reglas.regla
 
 | Columna | Tipo | Nulo | Restricción |
 |---|---|---:|---|
@@ -99,7 +106,7 @@ UK: `(flujo_reglas_id, codigo)`.
 
 `tipo_regla IN ('PARAMETRIZABLE','ESPECIALIZADA')`.
 
-## 8. version_regla
+## 8. reglas.version_regla
 
 | Columna | Tipo | Nulo | Restricción |
 |---|---|---:|---|
@@ -127,7 +134,7 @@ Severidades: INFORMATIVA, ADVERTENCIA, BLOQUEANTE.
 
 `codigo_error`, `mensaje_error`, `severidad`, vigencias y aprobación son la única fuente de verdad relacional. No se duplican dentro de `definicion_json`.
 
-## 9. ejecucion_regla
+## 9. reglas.ejecucion_regla
 
 | Columna | Tipo | Nulo | Restricción |
 |---|---|---:|---|

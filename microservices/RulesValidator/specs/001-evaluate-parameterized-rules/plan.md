@@ -89,7 +89,7 @@ Los globales se ordenan antes de los específicos; dentro de cada alcance se ord
 
 La BD no almacena expresiones ejecutables.
 
-El catálogo de campos y operadores se obtiene de Azure SQL una vez por evaluación. No se cachea entre evaluaciones, para que las modificaciones del proceso que administra el catálogo surtan efecto en la siguiente solicitud.
+El catálogo de campos y operadores se obtiene de Azure SQL una vez por evaluación, combinando GLOBAL y negocio/proceso/tipo de plan aplicables. La configuración específica reemplaza GLOBAL por ruta; no se cachea entre evaluaciones para que los cambios surtan efecto en la siguiente solicitud. El contexto es un objeto JSON plano cuyas claves pueden contener punto, por ejemplo `"pension.tipo"`.
 
 `IValidadorDefinicionRegla` valida:
 

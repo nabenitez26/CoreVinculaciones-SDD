@@ -54,8 +54,12 @@ Un campo conocido de `contexto` presente con un tipo JSON incompatible se retorn
 
 ## C-013 Catálogo dinámico de campos
 
-Los campos, tipos y operadores permitidos se administran en las tablas `campo_regla` y `campo_regla_operador` de Azure SQL mediante un proceso externo. RulesValidator carga el catálogo activo una vez por evaluación; no lo cachea entre evaluaciones. El catálogo inicial de la migración cubre los campos y operadores requeridos por RV-001, RV-101 y RV-002.
+Los campos, tipos y operadores permitidos se administran en las tablas `campo_regla` y `campo_regla_operador` de Azure SQL mediante un proceso externo, con scope GLOBAL o negocio/proceso/tipo de plan. RulesValidator carga y combina el catálogo aplicable una vez por evaluación, sin cache entre requests. Las entradas específicas reemplazan GLOBAL por ruta y se usan desde la siguiente evaluación. Una entrada específica inactiva también reemplaza y suprime el fallback GLOBAL de esa ruta.
 
 ## C-014 Alcance de globales y tipo de plan
 
-Las reglas de GLOBAL se limitan únicamente por proceso y aplican en cualquier negocio, etapa y `tipo_plan_id` de ese proceso. Los flujos GLOBAL se almacenan con `etapa = NULL` y `tipo_plan_id = NULL`. Los flujos específicos se seleccionan por negocio, proceso y etapa; cuando el proceso es VINCULACION también deben coincidir con `tipo_plan_id`. Este campo es varchar de máximo 10 caracteres y obligatorio en requests de VINCULACION; se omite para otros procesos.
+Las reglas de GLOBAL se limitan únicamente por proceso y aplican en cualquier negocio, etapa y `tipoPlanId` de ese proceso. Los flujos GLOBAL se almacenan con `etapa = NULL` y `tipo_plan_id = NULL`. Los flujos específicos se seleccionan por negocio, proceso y etapa; cuando el proceso es VINCULACION también deben coincidir con `tipo_plan_id`. El request usa `tipoPlanId`; SQL usa `tipo_plan_id`, varchar de máximo 10 caracteres. `tipoPlanId` identifica el plan asociado al tipo de vinculación (por ejemplo TP-01); es obligatorio en VINCULACION y se omite en otros procesos.
+
+## C-015 Contexto plano
+
+El contexto es un objeto JSON plano. Sus claves son literales de catálogo, pueden contener puntos y usan nombres funcionales en español, por ejemplo `pension.tipo`, `pension.mesadaEnSmlmv`, `persona.genero`, `persona.edad`, `persona.tipoDocumento` y `plan.codigo`. El tipo de vinculación/plan ya se establece con negocio, proceso y `tipoPlanId`; no se repite dentro de `contexto`.

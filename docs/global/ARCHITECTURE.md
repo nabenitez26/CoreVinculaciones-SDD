@@ -11,6 +11,11 @@ Rules Validator
       ▼
 Azure SQL
 
+RulesValidator almacena sus tablas en el esquema `reglas`:
+`reglas.negocio`, `reglas.flujo_reglas`, `reglas.regla`,
+`reglas.version_regla`, `reglas.ejecucion_regla`, `reglas.campo_regla`
+y `reglas.campo_regla_operador`.
+
 
 ## Patrón arquitectónico
 

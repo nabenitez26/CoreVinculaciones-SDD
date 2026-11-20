@@ -18,10 +18,12 @@ La solicitud contiene:
 
 - `negocio`, obligatorio;
 - `proceso`, obligatorio;
-- `tipo_plan_id`, obligatorio cuando `proceso = VINCULACION`, varchar de hasta 10 caracteres;
+- `tipoPlanId`, identificador varchar de hasta 10 caracteres del plan asociado al tipo de vinculación, obligatorio cuando `proceso = VINCULACION`;
 - `etapa`, obligatoria y mayor que cero;
 - `fechaEvaluacion`, opcional, ISO 8601 UTC;
 - `contexto`, obligatorio.
+
+`contexto` es un objeto JSON plano. Sus claves son nombres funcionales en español, son rutas literales del catálogo dinámico y pueden contener puntos; no se representan como objetos anidados. Por ejemplo: `"pension.tipo"`, `"pension.mesadaEnSmlmv"`, `"persona.genero"`, `"persona.edad"`, `"persona.tipoDocumento"` y `"plan.codigo"`.
 
 `idEvaluacion` no se recibe del consumidor. RulesValidator lo genera para cada ejecución.
 
@@ -43,10 +45,10 @@ No se permiten como sinónimos técnicos `AllowanceInSmlmv`, `subsidioEnSmlmv` n
 
 Existe un registro especial en `negocio` con `codigo = GLOBAL`.
 
-Para una solicitud de negocio `PENSIONADOS`, RulesValidator selecciona:
+Para una solicitud de negocio `SALUD`, RulesValidator selecciona:
 
 1. flujos activos de GLOBAL limitados únicamente al mismo proceso;
-2. flujos activos de PENSIONADOS para el mismo proceso y etapa, y el mismo `tipo_plan_id` si el proceso es VINCULACION.
+2. flujos activos de SALUD para el mismo proceso y etapa, y el mismo `tipo_plan_id` si el proceso es VINCULACION.
 
 Las reglas globales se evalúan primero. Después se evalúan las reglas específicas ordenadas por prioridad.
 
