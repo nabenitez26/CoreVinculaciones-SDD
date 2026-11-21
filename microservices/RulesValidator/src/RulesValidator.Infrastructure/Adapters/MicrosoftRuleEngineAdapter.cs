@@ -96,7 +96,7 @@ public sealed class MicrosoftRuleEngineAdapter(ExpressionBuilder expressionBuild
 
     private async Task<IReadOnlyDictionary<int, bool>> EjecutarPredicadosAsync(
         IReadOnlyList<(int Indice, string Expresion)> predicados,
-        Dictionary<string, object> contexto,
+        ContextoTipadoReglas contexto,
         CancellationToken cancellationToken)
     {
         var workflowName = $"RulesValidator_{Guid.NewGuid():N}";
@@ -148,7 +148,13 @@ public sealed class MicrosoftRuleEngineAdapter(ExpressionBuilder expressionBuild
 
     private static ReSettings CrearConfiguracionSegura() => new()
     {
-        CustomTypes = [typeof(Dictionary<string, object>)],
+        CustomTypes =
+        [
+            typeof(ContextoTipadoReglas),
+            typeof(Dictionary<string, string>),
+            typeof(Dictionary<string, decimal>),
+            typeof(Dictionary<string, bool>)
+        ],
         AutoRegisterInputType = false,
         AutoExecuteActions = false,
         EnableScopedParams = false,
@@ -157,11 +163,11 @@ public sealed class MicrosoftRuleEngineAdapter(ExpressionBuilder expressionBuild
         IgnoreException = false
     };
 
-    private static Dictionary<string, object> CrearContexto(
+    private static ContextoTipadoReglas CrearContexto(
         JsonElement contexto,
         IReadOnlyList<CampoReglaPermitido> camposPermitidos)
     {
-        var valores = new Dictionary<string, object>(StringComparer.Ordinal);
+        var valores = new ContextoTipadoReglas();
         foreach (var campo in camposPermitidos)
         {
             var estado = LeerValor(contexto, campo);
@@ -170,9 +176,21 @@ public sealed class MicrosoftRuleEngineAdapter(ExpressionBuilder expressionBuild
                 throw new InvalidOperationException("El contexto no coincide con los tipos del catálogo activo.");
             }
 
-            if (estado.Valor is not null)
+            switch (estado.Valor)
             {
-                valores.Add(campo.Codigo, estado.Valor);
+                case null:
+                    break;
+                case string texto when campo.TipoValor == TipoValorCampo.Texto:
+                    valores.Textos.Add(campo.Codigo, texto);
+                    break;
+                case decimal numero when campo.TipoValor == TipoValorCampo.Numero:
+                    valores.Numeros.Add(campo.Codigo, numero);
+                    break;
+                case bool booleano when campo.TipoValor == TipoValorCampo.Booleano:
+                    valores.Booleanos.Add(campo.Codigo, booleano);
+                    break;
+                default:
+                    throw new InvalidOperationException("El valor normalizado no coincide con el tipo del catálogo activo.");
             }
         }
 

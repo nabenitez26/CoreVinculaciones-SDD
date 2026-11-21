@@ -22,12 +22,11 @@ public sealed class ExpressionBuilder
             throw new InvalidOperationException("La definición contiene un campo u operador no permitido.");
         }
 
-        var indexador = $"input1[{JsonSerializer.Serialize(condicion.Campo)}]";
         var campo = configuracion.TipoValor switch
         {
-            TipoValorCampo.Texto => $"((string){indexador})",
-            TipoValorCampo.Numero => $"((decimal){indexador})",
-            TipoValorCampo.Booleano => $"((bool){indexador})",
+            TipoValorCampo.Texto => $"input1.Textos[{JsonSerializer.Serialize(condicion.Campo)}]",
+            TipoValorCampo.Numero => $"input1.Numeros[{JsonSerializer.Serialize(condicion.Campo)}]",
+            TipoValorCampo.Booleano => $"input1.Booleanos[{JsonSerializer.Serialize(condicion.Campo)}]",
             _ => throw new InvalidOperationException("El tipo de campo no está permitido.")
         };
 
