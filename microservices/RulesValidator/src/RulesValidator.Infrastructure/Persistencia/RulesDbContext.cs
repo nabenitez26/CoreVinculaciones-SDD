@@ -7,7 +7,12 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
 {
     public DbSet<CampoReglaEntity> CamposRegla => Set<CampoReglaEntity>();
     public DbSet<CampoReglaOperadorEntity> OperadoresCampoRegla => Set<CampoReglaOperadorEntity>();
-    public DbSet<NegocioEntity> Negocios => Set<NegocioEntity>();
+    public DbSet<NegocioCoreEntity> NegociosCore => Set<NegocioCoreEntity>();
+    public DbSet<TipoPlanCoreEntity> TiposPlanCore => Set<TipoPlanCoreEntity>();
+    public DbSet<TipoContratoCoreEntity> TiposContratoCore => Set<TipoContratoCoreEntity>();
+    public DbSet<TipoVinculacionCoreEntity> TiposVinculacionCore => Set<TipoVinculacionCoreEntity>();
+    public DbSet<DatoRequeridoCoreEntity> DatosRequeridosCore => Set<DatoRequeridoCoreEntity>();
+    public DbSet<TipoDatoCoreEntity> TiposDatoCore => Set<TipoDatoCoreEntity>();
     public DbSet<FlujoReglasEntity> FlujosReglas => Set<FlujoReglasEntity>();
     public DbSet<ReglaEntity> Reglas => Set<ReglaEntity>();
     public DbSet<VersionReglaEntity> VersionesRegla => Set<VersionReglaEntity>();
@@ -17,7 +22,7 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
     {
         ConfigurarCampoRegla(modelBuilder);
         ConfigurarCampoReglaOperador(modelBuilder);
-        ConfigurarNegocio(modelBuilder);
+        ConfigurarEntidadesCore(modelBuilder);
         ConfigurarFlujoReglas(modelBuilder);
         ConfigurarRegla(modelBuilder);
         ConfigurarVersionRegla(modelBuilder);
@@ -31,22 +36,37 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
             tabla.HasCheckConstraint("CK_campo_regla_tipo_valor", "[tipo_valor] IN ('TEXTO', 'NUMERO', 'BOOLEANO')"));
         entidad.HasKey(e => e.CampoReglaId).HasName("PK_campo_regla");
         entidad.Property(e => e.CampoReglaId).HasColumnName("campo_regla_id").UseIdentityColumn();
-        entidad.Property(e => e.NegocioCodigo).HasColumnName("negocio_codigo").HasColumnType("varchar(50)").HasMaxLength(50).IsUnicode(false).IsRequired();
+        entidad.Property(e => e.NegocioId).HasColumnName("negocio_id").HasColumnType("nvarchar(20)").HasMaxLength(20).IsUnicode();
         entidad.Property(e => e.Proceso).HasColumnName("proceso").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false);
-        entidad.Property(e => e.TipoPlanId).HasColumnName("tipo_plan_id").HasColumnType("varchar(10)").HasMaxLength(10).IsUnicode(false);
+        entidad.Property(e => e.TipoPlanId).HasColumnName("tipo_plan_id").HasColumnType("nvarchar(10)").HasMaxLength(10).IsUnicode();
         entidad.Property(e => e.Codigo).HasColumnName("codigo").HasColumnType("varchar(150)").HasMaxLength(150).IsUnicode(false).IsRequired();
         entidad.Property(e => e.TipoValor).HasColumnName("tipo_valor").HasColumnType("varchar(20)").HasMaxLength(20).IsUnicode(false).IsRequired();
+        entidad.Property(e => e.DatoRequeridoId).HasColumnName("dato_requerido_id").HasColumnType("nvarchar(10)").HasMaxLength(10).IsUnicode();
         entidad.Property(e => e.Activo).HasColumnName("activo").IsRequired();
         entidad.Property(e => e.FechaCreacion).HasColumnName("fecha_creacion").HasColumnType("datetime2").IsRequired();
         entidad.Property(e => e.UsuarioCreacion).HasColumnName("usuario_creacion").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false).IsRequired();
         entidad.Property(e => e.FechaModificacion).HasColumnName("fecha_modificacion").HasColumnType("datetime2");
         entidad.Property(e => e.UsuarioModificacion).HasColumnName("usuario_modificacion").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false);
-        entidad.HasIndex(e => new { e.NegocioCodigo, e.Proceso, e.TipoPlanId, e.Codigo })
+        entidad.HasIndex(e => new { e.NegocioId, e.Proceso, e.TipoPlanId, e.Codigo })
             .IsUnique()
-            .HasFilter("[negocio_codigo] IS NOT NULL")
             .HasDatabaseName("UX_campo_regla_scope_codigo");
-        entidad.HasIndex(e => new { e.Activo, e.NegocioCodigo, e.Proceso, e.TipoPlanId })
+        entidad.HasIndex(e => new { e.Activo, e.NegocioId, e.Proceso, e.TipoPlanId })
             .HasDatabaseName("IX_campo_regla_scope_activo");
+        entidad.HasOne(e => e.Negocio)
+            .WithMany()
+            .HasForeignKey(e => e.NegocioId)
+            .OnDelete(DeleteBehavior.NoAction)
+            .HasConstraintName("FK_campo_regla_negocio");
+        entidad.HasOne(e => e.TipoPlan)
+            .WithMany()
+            .HasForeignKey(e => e.TipoPlanId)
+            .OnDelete(DeleteBehavior.NoAction)
+            .HasConstraintName("FK_campo_regla_tipo_plan");
+        entidad.HasOne(e => e.DatoRequerido)
+            .WithMany()
+            .HasForeignKey(e => e.DatoRequeridoId)
+            .OnDelete(DeleteBehavior.NoAction)
+            .HasConstraintName("FK_campo_regla_dato_requerido");
     }
 
     private static void ConfigurarCampoReglaOperador(ModelBuilder modelBuilder)
@@ -64,21 +84,58 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
             .HasConstraintName("FK_campo_regla_operador_campo_regla");
     }
 
-    private static void ConfigurarNegocio(ModelBuilder modelBuilder)
+    private static void ConfigurarEntidadesCore(ModelBuilder modelBuilder)
     {
-        var entidad = modelBuilder.Entity<NegocioEntity>();
-        entidad.ToTable("negocio", "reglas");
-        entidad.HasKey(e => e.NegocioId).HasName("PK_negocio");
-        entidad.Property(e => e.NegocioId).HasColumnName("negocio_id").UseIdentityColumn();
-        entidad.Property(e => e.Codigo).HasColumnName("codigo").HasColumnType("varchar(50)").HasMaxLength(50).IsUnicode(false).IsRequired();
-        entidad.Property(e => e.Nombre).HasColumnName("nombre").HasColumnType("varchar(150)").HasMaxLength(150).IsUnicode(false).IsRequired();
-        entidad.Property(e => e.Descripcion).HasColumnName("descripcion").HasColumnType("varchar(500)").HasMaxLength(500).IsUnicode(false);
-        entidad.Property(e => e.Activo).HasColumnName("activo").IsRequired();
-        entidad.Property(e => e.FechaCreacion).HasColumnName("fecha_creacion").HasColumnType("datetime2").IsRequired();
-        entidad.Property(e => e.UsuarioCreacion).HasColumnName("usuario_creacion").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false).IsRequired();
-        entidad.Property(e => e.FechaModificacion).HasColumnName("fecha_modificacion").HasColumnType("datetime2");
-        entidad.Property(e => e.UsuarioModificacion).HasColumnName("usuario_modificacion").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false);
-        entidad.HasAlternateKey(e => e.Codigo).HasName("UK_negocio_codigo");
+        var negocio = modelBuilder.Entity<NegocioCoreEntity>();
+        negocio.ToTable("negocio", "ref", tabla => tabla.ExcludeFromMigrations());
+        negocio.HasKey(e => e.NegocioId);
+        negocio.Property(e => e.NegocioId).HasColumnName("negocio_id").HasColumnType("nvarchar(20)").HasMaxLength(20).IsUnicode();
+
+        var tipoPlan = modelBuilder.Entity<TipoPlanCoreEntity>();
+        tipoPlan.ToTable("tipo_plan", "mae", tabla => tabla.ExcludeFromMigrations());
+        tipoPlan.HasKey(e => e.TipoPlanId);
+        tipoPlan.Property(e => e.TipoPlanId).HasColumnName("tipo_plan_id").HasColumnType("nvarchar(10)").HasMaxLength(10).IsUnicode();
+        tipoPlan.Property(e => e.TipoContratoId).HasColumnName("tipo_contrato_id").HasColumnType("nvarchar(10)").HasMaxLength(10).IsUnicode();
+        tipoPlan.HasOne(e => e.TipoContrato)
+            .WithMany()
+            .HasForeignKey(e => e.TipoContratoId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        var tipoContrato = modelBuilder.Entity<TipoContratoCoreEntity>();
+        tipoContrato.ToTable("tipo_contrato", "mae", tabla => tabla.ExcludeFromMigrations());
+        tipoContrato.HasKey(e => e.TipoContratoId);
+        tipoContrato.Property(e => e.TipoContratoId).HasColumnName("tipo_contrato_id").HasColumnType("nvarchar(10)").HasMaxLength(10).IsUnicode();
+        tipoContrato.Property(e => e.TipoVinculacionId).HasColumnName("tipo_vinculacion_id").HasColumnType("nvarchar(10)").HasMaxLength(10).IsUnicode();
+        tipoContrato.HasOne(e => e.TipoVinculacion)
+            .WithMany()
+            .HasForeignKey(e => e.TipoVinculacionId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        var tipoVinculacion = modelBuilder.Entity<TipoVinculacionCoreEntity>();
+        tipoVinculacion.ToTable("tipo_vinculacion", "mae", tabla => tabla.ExcludeFromMigrations());
+        tipoVinculacion.HasKey(e => e.TipoVinculacionId);
+        tipoVinculacion.Property(e => e.TipoVinculacionId).HasColumnName("tipo_vinculacion_id").HasColumnType("nvarchar(10)").HasMaxLength(10).IsUnicode();
+        tipoVinculacion.Property(e => e.NegocioId).HasColumnName("negocio_id").HasColumnType("nvarchar(20)").HasMaxLength(20).IsUnicode();
+        tipoVinculacion.HasOne(e => e.Negocio)
+            .WithMany()
+            .HasForeignKey(e => e.NegocioId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        var datoRequerido = modelBuilder.Entity<DatoRequeridoCoreEntity>();
+        datoRequerido.ToTable("dato_requerido", "cfg", tabla => tabla.ExcludeFromMigrations());
+        datoRequerido.HasKey(e => e.DatoRequeridoId);
+        datoRequerido.Property(e => e.DatoRequeridoId).HasColumnName("dato_requerido_id").HasColumnType("nvarchar(10)").HasMaxLength(10).IsUnicode();
+        datoRequerido.Property(e => e.TipoDatoId).HasColumnName("tipo_dato_id").HasColumnType("nvarchar(20)").HasMaxLength(20).IsUnicode();
+        datoRequerido.HasOne(e => e.TipoDato)
+            .WithMany()
+            .HasForeignKey(e => e.TipoDatoId)
+            .OnDelete(DeleteBehavior.NoAction);
+
+        var tipoDato = modelBuilder.Entity<TipoDatoCoreEntity>();
+        tipoDato.ToTable("tipo_dato", "ref", tabla => tabla.ExcludeFromMigrations());
+        tipoDato.HasKey(e => e.TipoDatoId);
+        tipoDato.Property(e => e.TipoDatoId).HasColumnName("tipo_dato_id").HasColumnType("nvarchar(20)").HasMaxLength(20).IsUnicode();
+        tipoDato.Property(e => e.Nombre).HasColumnName("nombre").HasColumnType("nvarchar(400)").HasMaxLength(400).IsUnicode();
     }
 
     private static void ConfigurarFlujoReglas(ModelBuilder modelBuilder)
@@ -91,12 +148,12 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
         });
         entidad.HasKey(e => e.FlujoReglasId).HasName("PK_flujo_reglas");
         entidad.Property(e => e.FlujoReglasId).HasColumnName("flujo_reglas_id").UseIdentityColumn();
-        entidad.Property(e => e.NegocioId).HasColumnName("negocio_id").IsRequired();
+        entidad.Property(e => e.NegocioId).HasColumnName("negocio_id").HasColumnType("nvarchar(20)").HasMaxLength(20).IsUnicode();
         entidad.Property(e => e.Codigo).HasColumnName("codigo").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false).IsRequired();
         entidad.Property(e => e.Nombre).HasColumnName("nombre").HasColumnType("varchar(200)").HasMaxLength(200).IsUnicode(false).IsRequired();
         entidad.Property(e => e.Proceso).HasColumnName("proceso").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false).IsRequired();
         entidad.Property(e => e.Etapa).HasColumnName("etapa");
-        entidad.Property(e => e.TipoPlanId).HasColumnName("tipo_plan_id").HasColumnType("varchar(10)").HasMaxLength(10).IsUnicode(false);
+        entidad.Property(e => e.TipoPlanId).HasColumnName("tipo_plan_id").HasColumnType("nvarchar(10)").HasMaxLength(10).IsUnicode();
         entidad.Property(e => e.Prioridad).HasColumnName("prioridad").IsRequired();
         entidad.Property(e => e.Activo).HasColumnName("activo").IsRequired();
         entidad.Property(e => e.FechaCreacion).HasColumnName("fecha_creacion").HasColumnType("datetime2").IsRequired();
@@ -107,10 +164,15 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
         entidad.HasIndex(e => new { e.NegocioId, e.Proceso, e.TipoPlanId, e.Etapa, e.Activo, e.Prioridad })
             .HasDatabaseName("IX_flujo_reglas_negocio_proceso_tipo_etapa_activo_prioridad");
         entidad.HasOne(e => e.Negocio)
-            .WithMany(e => e.FlujosReglas)
+            .WithMany()
             .HasForeignKey(e => e.NegocioId)
             .OnDelete(DeleteBehavior.NoAction)
             .HasConstraintName("FK_flujo_reglas_negocio");
+        entidad.HasOne(e => e.TipoPlan)
+            .WithMany()
+            .HasForeignKey(e => e.TipoPlanId)
+            .OnDelete(DeleteBehavior.NoAction)
+            .HasConstraintName("FK_flujo_reglas_tipo_plan");
     }
 
     private static void ConfigurarRegla(ModelBuilder modelBuilder)
@@ -187,10 +249,10 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
         entidad.HasKey(e => e.EjecucionReglaId).HasName("PK_ejecucion_regla");
         entidad.Property(e => e.EjecucionReglaId).HasColumnName("ejecucion_regla_id").UseIdentityColumn();
         entidad.Property(e => e.IdEvaluacion).HasColumnName("id_evaluacion").IsRequired();
-        entidad.Property(e => e.NegocioId).HasColumnName("negocio_id").IsRequired();
+        entidad.Property(e => e.NegocioId).HasColumnName("negocio_id").HasColumnType("nvarchar(20)").HasMaxLength(20).IsUnicode();
         entidad.Property(e => e.Proceso).HasColumnName("proceso").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false).IsRequired();
-        entidad.Property(e => e.TipoPlanId).HasColumnName("tipo_plan_id").HasColumnType("varchar(10)").HasMaxLength(10).IsUnicode(false);
-        entidad.Property(e => e.Etapa).HasColumnName("etapa").IsRequired();
+        entidad.Property(e => e.TipoPlanId).HasColumnName("tipo_plan_id").HasColumnType("nvarchar(10)").HasMaxLength(10).IsUnicode();
+        entidad.Property(e => e.Etapa).HasColumnName("etapa");
         entidad.Property(e => e.FlujosJson).HasColumnName("flujos_json").HasColumnType("nvarchar(max)").IsRequired();
         entidad.Property(e => e.ResultadoGeneral).HasColumnName("resultado_general").HasColumnType("varchar(30)").HasMaxLength(30).IsUnicode(false).IsRequired();
         entidad.Property(e => e.ResultadosJson).HasColumnName("resultados_json").HasColumnType("nvarchar(max)").IsRequired();
@@ -201,9 +263,14 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
         entidad.Property(e => e.IdTraza).HasColumnName("id_traza").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false);
         entidad.HasAlternateKey(e => e.IdEvaluacion).HasName("UK_ejecucion_regla_id_evaluacion");
         entidad.HasOne(e => e.Negocio)
-            .WithMany(e => e.Ejecuciones)
+            .WithMany()
             .HasForeignKey(e => e.NegocioId)
             .OnDelete(DeleteBehavior.NoAction)
             .HasConstraintName("FK_ejecucion_regla_negocio");
+        entidad.HasOne(e => e.TipoPlan)
+            .WithMany()
+            .HasForeignKey(e => e.TipoPlanId)
+            .OnDelete(DeleteBehavior.NoAction)
+            .HasConstraintName("FK_ejecucion_regla_tipo_plan");
     }
 }

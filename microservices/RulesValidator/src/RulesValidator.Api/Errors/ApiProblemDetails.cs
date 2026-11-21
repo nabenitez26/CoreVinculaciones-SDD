@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using RulesValidator.Api.Dtos;
@@ -32,7 +31,7 @@ public static class ApiProblemDetails
         int status,
         string titulo,
         string detalle,
-        IReadOnlyList<ErrorProblemaResponse>? errores = null)
+        string codigo)
     {
         var problema = new ProblemDetails
         {
@@ -42,13 +41,8 @@ public static class ApiProblemDetails
             Detail = detalle,
             Instance = context.Request.Path
         };
-        problema.Extensions["idTraza"] = Activity.Current?.Id ?? context.TraceIdentifier;
+        problema.Extensions["codigo"] = codigo;
         problema.Extensions["idCorrelacion"] = ObtenerIdCorrelacion(context);
-
-        if (errores is { Count: > 0 })
-        {
-            problema.Extensions["errors"] = errores;
-        }
 
         return TypedResults.Problem(problema);
     }

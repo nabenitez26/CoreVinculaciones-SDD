@@ -12,7 +12,7 @@
 
 ## 2. RV-101
 
-| mesadaEnSmlmv | Estado | Severidad | Código error | Mensaje |
+| pension.mesadaEnSmlmv | Estado | Severidad | Código error | Mensaje |
 |---:|---|---|---|---|
 | 0.99 | NO_CUMPLE | BLOQUEANTE | ERR-MESADA-MINIMA | La mesada debe ser de al menos un SMLMV. |
 | 1.00 | CUMPLE | BLOQUEANTE | null | null |
@@ -21,16 +21,16 @@
 
 ## 3. RV-002
 
-| plan.codigo | mesadaEnSmlmv | Estado | Severidad | Código error | Mensaje |
+| tipoPlanId | pension.mesadaEnSmlmv | Estado | Severidad | Código error | Mensaje |
 |---|---:|---|---|---|---|
 | TP-01 | 1.49 | CUMPLE | BLOQUEANTE | null | null |
 | TP-01 | 1.50 | CUMPLE | BLOQUEANTE | null | null |
 | TP-01 | 1.51 | NO_CUMPLE | BLOQUEANTE | ERR-MESADA-TP01 | La mesada supera el tope del plan TP-01. |
-| TP-02 | 1.40 | NO_APLICA | BLOQUEANTE | null | null |
+| TP-02 | 1.40 | RV-002 no es seleccionado por el flujo de TP-02 |
 | TP-01 | ausente | INDETERMINADO | BLOQUEANTE | DATOS_INSUFICIENTES | No existe información suficiente para evaluar RV-002. |
 | ausente | 1.40 | INDETERMINADO | BLOQUEANTE | DATOS_INSUFICIENTES | No existe información suficiente para evaluar RV-002. |
 
-La definición de RV-002 expresa `plan.codigo = TP-01` en el nodo raíz opcional `aplicabilidad`; el tope de mesada permanece en la condición principal. Si la aplicabilidad es falsa, la condición principal no se ejecuta.
+RV-002 pertenece al flujo configurado para `tipoPlanId = TP-01`. El tipo de plan selecciona el flujo; no se repite en el contexto ni en `RuleDefinition`.
 
 ## 4. Consolidación
 
@@ -45,10 +45,9 @@ Dado negocio SALUD, proceso VINCULACION, `tipoPlanId` TP-01 y etapa 4, se recupe
 
 ## 5.1 tipoPlanId
 
-- Proceso VINCULACION sin `tipoPlanId` -> 400 ProblemDetails.
-- Proceso VINCULACION con `tipoPlanId` de más de 10 caracteres -> 400 ProblemDetails.
-- Proceso distinto de VINCULACION con `tipoPlanId` -> 400 ProblemDetails.
-- Proceso distinto de VINCULACION omite `tipoPlanId`.
+- `tipoPlanId` ausente se acepta cuando la selección de reglas no depende del plan.
+- `tipoPlanId` con más de 10 caracteres -> 400 ProblemDetails.
+- Un `tipoPlanId` informado se resuelve contra `mae.tipo_plan` y se valida contra el negocio Core.
 
 ## 6. Vigencia
 
@@ -63,8 +62,9 @@ Dado negocio SALUD, proceso VINCULACION, `tipoPlanId` TP-01 y etapa 4, se recupe
 
 ## 7. API y errores
 
-- Ruta única: POST /api/v1/evaluaciones-reglas.
-- Faltan negocio, proceso, etapa o contexto -> 400 ProblemDetails.
+- Ruta única: POST /api/v1/evaluar-reglas.
+- Faltan `negocioId`, proceso o contexto -> 400 ProblemDetails.
+- `etapa` omitida se acepta; si se informa debe ser mayor que cero.
 - JSON malformado, propiedad superior desconocida o X-Correlation-ID de más de 100 caracteres -> 400 ProblemDetails.
 - Un campo conocido de contexto presente con tipo incompatible -> 422 ProblemDetails con `errors[].codigo = CONTEXTO_TIPO_INVALIDO` y `errors[].campo`.
 - Un campo requerido por una regla ausente o `null` -> HTTP 200 y resultado individual INDETERMINADO.
@@ -76,7 +76,7 @@ Dado negocio SALUD, proceso VINCULACION, `tipoPlanId` TP-01 y etapa 4, se recupe
 
 - Con X-Correlation-ID se conserva el valor en respuesta, ejecución y traza.
 - Sin header se genera un valor.
-- `duracionMs >= 0` y coincide en respuesta, persistencia y telemetría.
+- `duracionMs >= 0` se conserva en auditoría y telemetría; no se expone en la respuesta OpenAPI.
 - idEvaluacion es generado por el servicio y se devuelve.
 - El contexto completo y PII no aparecen en logs.
 

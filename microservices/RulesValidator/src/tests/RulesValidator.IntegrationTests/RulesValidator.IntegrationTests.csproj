@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\RulesValidator.Api\RulesValidator.Api.csproj" />
     <ProjectReference Include="..\..\RulesValidator.Infrastructure\RulesValidator.Infrastructure.csproj" />
   </ItemGroup>
 

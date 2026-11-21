@@ -3,7 +3,7 @@ namespace RulesValidator.Domain.Reglas;
 public sealed class FlujoReglas
 {
     public FlujoReglas(
-        long negocioId,
+        string? negocioId,
         string codigo,
         string nombre,
         string proceso,
@@ -35,7 +35,7 @@ public sealed class FlujoReglas
 
     public long FlujoReglasId { get; private set; }
 
-    public long NegocioId { get; private set; }
+    public string? NegocioId { get; private set; }
 
     public string Codigo { get; private set; }
 

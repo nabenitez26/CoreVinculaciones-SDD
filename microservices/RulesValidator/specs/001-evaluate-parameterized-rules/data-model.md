@@ -11,12 +11,18 @@
 ## 2. Relaciones
 
 ```text
-reglas.negocio 1---N reglas.flujo_reglas 1---N reglas.regla 1---N reglas.version_regla
-reglas.negocio 1---N reglas.ejecucion_regla
+ref.negocio 1---N mae.tipo_vinculacion 1---N mae.tipo_contrato 1---N mae.tipo_plan
+ref.negocio 1---N reglas.flujo_reglas
+mae.tipo_plan 1---N reglas.flujo_reglas
+reglas.flujo_reglas 1---N reglas.regla 1---N reglas.version_regla
+ref.negocio 1---N reglas.ejecucion_regla
+cfg.dato_requerido 1---N reglas.campo_regla
 reglas.campo_regla 1---N reglas.campo_regla_operador
 ```
 
-Todas las tablas de esta feature pertenecen al esquema SQL `reglas`.
+RulesValidator mantiene seis tablas en el esquema `reglas`: `flujo_reglas`, `regla`, `version_regla`, `campo_regla`, `campo_regla_operador` y `ejecucion_regla`. No duplica `ref.negocio` ni `mae.tipo_plan`; `reglas.flujo_reglas` referencia sus claves existentes. Tampoco crea tablas propias de tipo de plan o tipo de vinculación.
+
+`trx.dato_requerido_valor` y `trx.vinculacion` permanecen bajo propiedad del Core. El Rule Validator recibe los valores de evaluación en el contexto y no los copia ni persiste en sus tablas.
 
 ## 3. reglas.campo_regla
 
@@ -25,56 +31,41 @@ Catálogo operativo de rutas JSON autorizadas. Lo administra un proceso externo 
 | Columna | Tipo | Nulo | Restricción |
 |---|---|---:|---|
 | campo_regla_id | bigint identity | No | PK |
-| negocio_codigo | varchar(50) | No | `GLOBAL` o código del negocio |
+| negocio_id | nvarchar(20) | Sí | FK `ref.negocio`; NULL significa scope global |
 | proceso | varchar(100) | Sí | NULL significa cualquier proceso |
-| tipo_plan_id | varchar(10) | Sí | NULL significa cualquier tipo de plan |
+| tipo_plan_id | nvarchar(10) | Sí | FK `mae.tipo_plan`; NULL significa cualquier tipo de plan |
 | codigo | varchar(150) | No | Ruta JSON plana; puede contener puntos |
-| tipo_valor | varchar(20) | No | CHECK TEXTO, NUMERO o BOOLEANO |
+| dato_requerido_id | nvarchar(10) | Sí | Mapping a `cfg.dato_requerido`; NULL conserva compatibilidad con aliases existentes |
+| tipo_valor | varchar(20) | No | Tipo técnico fallback para campos aún no mapeados; al mapear, se deriva de `cfg.dato_requerido.tipo_dato_id` y `ref.tipo_dato` |
 | activo | bit | No | |
 | fecha_creacion | datetime2 | No | |
 | usuario_creacion | varchar(100) | No | |
 | fecha_modificacion | datetime2 | Sí | |
 | usuario_modificacion | varchar(100) | Sí | |
 
-UK: `(negocio_codigo, proceso, tipo_plan_id, codigo)`. El código usa segmentos seguros `[A-Za-z_][A-Za-z0-9_]*` separados por punto y se resuelve como clave JSON literal.
+UK: `(negocio_id, proceso, tipo_plan_id, codigo)`. `codigo` es el alias que usa RuleDefinition y se resuelve como clave JSON literal; no duplica el nombre, fuente, captura ni exigibilidad del dato definido en Core.
 
-El catálogo se carga para `GLOBAL` y el scope específico de negocio/proceso/tipo. Una entrada específica reemplaza la entrada GLOBAL con el mismo `codigo`; dentro de cada negocio, un proceso exacto reemplaza uno general y un `tipo_plan_id` exacto reemplaza el comodín NULL. La selección de scope ocurre antes del filtro `activo`, por lo que un registro específico inactivo deshabilita el fallback global. La migración inicial registra los campos usados por RV-001, RV-101 y RV-002 en el scope `PENSIONADOS` / `VINCULACION`.
+`cfg.dato_requerido` conserva la definición funcional de los datos. `reglas.campo_regla` solo relaciona el alias de RuleDefinition con ese dato, habilita o deshabilita su uso y aporta las restricciones propias del motor. El mapping es nullable durante la migración para conservar el catálogo existente; los campos que ya tengan mapping derivan el tipo desde Core.
 
 ## 4. reglas.campo_regla_operador
 
 | Columna | Tipo | Nulo | Restricción |
 |---|---|---:|---|
-| campo_regla_id | bigint | No | PK compuesta; FK campo_regla |
+| campo_regla_id | bigint | No | PK compuesta; FK `campo_regla` |
 | operador | varchar(30) | No | PK compuesta; CHECK operador neutral permitido |
 
-Las tablas de catálogo son la fuente de verdad para campos, tipos y combinaciones campo/operador habilitados. El servicio lee el conjunto activo una vez por evaluación; cambios efectuados en SQL aplican en la siguiente evaluación.
+Las reglas de catálogo describen el allow-list del motor, no duplican `cfg.dato_requerido`. El servicio carga el conjunto activo una vez por evaluación.
 
-## 5. reglas.negocio
-
-| Columna | Tipo | Nulo | Restricción |
-|---|---|---:|---|
-| negocio_id | bigint identity | No | PK |
-| codigo | varchar(50) | No | UK |
-| nombre | varchar(150) | No | |
-| descripcion | varchar(500) | Sí | |
-| activo | bit | No | |
-| fecha_creacion | datetime2 | No | |
-| usuario_creacion | varchar(100) | No | |
-| fecha_modificacion | datetime2 | Sí | |
-| usuario_modificacion | varchar(100) | Sí | |
-
-Debe existir `codigo = GLOBAL`.
-
-## 6. reglas.flujo_reglas
+## 5. reglas.flujo_reglas
 
 | Columna | Tipo | Nulo | Restricción |
 |---|---|---:|---|
 | flujo_reglas_id | bigint identity | No | PK |
-| negocio_id | bigint | No | FK negocio |
+| negocio_id | nvarchar(20) | Sí | FK `ref.negocio`; NULL identifica flujo global |
 | codigo | varchar(100) | No | UK |
 | nombre | varchar(200) | No | |
 | proceso | varchar(100) | No | |
-| tipo_plan_id | varchar(10) | Sí | Obligatorio para flujos específicos de VINCULACION; NULL para otros procesos y flujos globales |
+| tipo_plan_id | nvarchar(10) | Sí | FK `mae.tipo_plan`; NULL para otros procesos y flujos globales |
 | etapa | int | Sí | NULL para flujos globales de proceso; si tiene valor, CHECK etapa > 0 |
 | prioridad | int | No | CHECK prioridad >= 0 |
 | activo | bit | No | |
@@ -85,14 +76,14 @@ Debe existir `codigo = GLOBAL`.
 
 Índice: `(negocio_id, proceso, tipo_plan_id, etapa, activo, prioridad)`.
 
-Los flujos GLOBAL se limitan únicamente por `proceso`; usan `etapa = NULL` y `tipo_plan_id = NULL`. Los flujos específicos de negocio se seleccionan por proceso y etapa; para `VINCULACION`, además por `tipo_plan_id`.
+Los flujos con `negocio_id = NULL` se limitan únicamente por `proceso`; usan `etapa = NULL` y `tipo_plan_id = NULL`. Los flujos específicos se seleccionan por `negocio_id`, proceso y etapa; para `VINCULACION`, además por `tipo_plan_id`.
 
-## 7. reglas.regla
+## 6. reglas.regla
 
 | Columna | Tipo | Nulo | Restricción |
 |---|---|---:|---|
 | regla_id | bigint identity | No | PK |
-| flujo_reglas_id | bigint | No | FK flujo_reglas |
+| flujo_reglas_id | bigint | No | FK `reglas.flujo_reglas` |
 | codigo | varchar(50) | No | UK compuesto |
 | nombre | varchar(200) | No | |
 | descripcion | varchar(1000) | Sí | |
@@ -106,7 +97,7 @@ UK: `(flujo_reglas_id, codigo)`.
 
 `tipo_regla IN ('PARAMETRIZABLE','ESPECIALIZADA')`.
 
-## 8. reglas.version_regla
+## 7. reglas.version_regla
 
 | Columna | Tipo | Nulo | Restricción |
 |---|---|---:|---|
@@ -134,16 +125,16 @@ Severidades: INFORMATIVA, ADVERTENCIA, BLOQUEANTE.
 
 `codigo_error`, `mensaje_error`, `severidad`, vigencias y aprobación son la única fuente de verdad relacional. No se duplican dentro de `definicion_json`.
 
-## 9. reglas.ejecucion_regla
+## 8. reglas.ejecucion_regla
 
 | Columna | Tipo | Nulo | Restricción |
 |---|---|---:|---|
 | ejecucion_regla_id | bigint identity | No | PK |
 | id_evaluacion | uniqueidentifier | No | UK |
-| negocio_id | bigint | No | FK negocio |
+| negocio_id | nvarchar(20) | Sí | FK `ref.negocio`; NULL para auditorías globales históricas |
 | proceso | varchar(100) | No | |
-| tipo_plan_id | varchar(10) | Sí | Valor solicitado para VINCULACION |
-| etapa | int | No | |
+| tipo_plan_id | nvarchar(10) | Sí | FK `mae.tipo_plan` |
+| etapa | int | Sí | NULL cuando el proceso no usa etapas |
 | flujos_json | nvarchar(max) | No | ISJSON = 1 |
 | resultado_general | varchar(30) | No | CHECK |
 | resultados_json | nvarchar(max) | No | ISJSON = 1 |
@@ -157,7 +148,7 @@ Severidades: INFORMATIVA, ADVERTENCIA, BLOQUEANTE.
 
 No se persiste el contexto completo ni PII.
 
-## 10. Vigencia
+## 9. Vigencia
 
 ```text
 estado = ACTIVA

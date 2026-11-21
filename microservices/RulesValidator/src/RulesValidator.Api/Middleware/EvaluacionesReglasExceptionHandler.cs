@@ -18,24 +18,28 @@ public sealed class EvaluacionesReglasExceptionHandler(ILogger<EvaluacionesRegla
             return true;
         }
 
-        var (status, titulo, detalle) = exception switch
+        var (status, titulo, detalle, codigo) = exception switch
         {
             ConfiguracionReglasNoEncontradaException => (
                 StatusCodes.Status404NotFound,
                 "No existe configuración aplicable",
-                "No se encontraron reglas activas y vigentes para los criterios informados."),
+                "No se encontraron reglas activas y vigentes para los criterios informados.",
+                "CONFIGURACION_REGLAS_NO_ENCONTRADA"),
             ContextoNoProcesableException => (
                 StatusCodes.Status422UnprocessableEntity,
                 "Solicitud no procesable",
-                "Uno o más campos del contexto tienen un tipo incompatible."),
+                "Uno o más campos del contexto tienen un tipo incompatible.",
+                "CONTEXTO_TIPO_INVALIDO"),
             DefinicionReglaInvalidaException => (
                 StatusCodes.Status500InternalServerError,
                 "Error interno",
-                "No fue posible procesar la configuración activa de reglas."),
+                "No fue posible procesar la configuración activa de reglas.",
+                "DEFINICION_REGLA_INVALIDA"),
             _ => (
                 StatusCodes.Status500InternalServerError,
                 "Error interno",
-                "No fue posible procesar la evaluación de reglas.")
+                "No fue posible procesar la evaluación de reglas.",
+                "ERROR_INTERNO")
         };
 
         if (status == StatusCodes.Status500InternalServerError)
@@ -46,15 +50,7 @@ public sealed class EvaluacionesReglasExceptionHandler(ILogger<EvaluacionesRegla
                 exception.GetType().Name);
         }
 
-        var errores = exception is ContextoNoProcesableException contextoInvalido
-            ? contextoInvalido.Campos
-                .Select(campo => new ErrorProblemaResponse(
-                    "CONTEXTO_TIPO_INVALIDO",
-                    $"El campo '{campo}' tiene un tipo incompatible.",
-                    campo))
-                .ToList()
-            : null;
-        var problema = ApiProblemDetails.Crear(httpContext, status, titulo, detalle, errores);
+        var problema = ApiProblemDetails.Crear(httpContext, status, titulo, detalle, codigo);
         await problema.ExecuteAsync(httpContext);
         return true;
     }

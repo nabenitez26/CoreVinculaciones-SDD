@@ -1,4 +1,6 @@
 using System.Text.RegularExpressions;
+using System.Globalization;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using RulesValidator.Application.Abstracciones;
 using RulesValidator.Domain.Reglas.Definiciones;
@@ -8,8 +10,6 @@ namespace RulesValidator.Infrastructure.Persistencia.Repositorios;
 
 public sealed partial class RepositorioSqlCatalogoCampos(RulesDbContext contexto) : IRepositorioCatalogoCampos
 {
-    private const string CodigoNegocioGlobal = "GLOBAL";
-
     public async Task<IReadOnlyList<CampoReglaPermitido>> ObtenerCamposActivosAsync(
         string negocio,
         string proceso,
@@ -18,17 +18,18 @@ public sealed partial class RepositorioSqlCatalogoCampos(RulesDbContext contexto
     {
         var entidades = await contexto.CamposRegla
             .AsNoTracking()
-            .Where(campo => (campo.NegocioCodigo == CodigoNegocioGlobal || campo.NegocioCodigo == negocio)
+            .Where(campo => (campo.NegocioId == null || campo.NegocioId == negocio)
                 && (campo.Proceso == null || campo.Proceso == proceso)
                 && (campo.TipoPlanId == null || campo.TipoPlanId == tipoPlanId))
             .Include(campo => campo.Operadores)
+            .Include(campo => campo.DatoRequerido)
+                .ThenInclude(dato => dato!.TipoDato)
             .ToListAsync(cancellationToken);
 
         var seleccionados = entidades
             .GroupBy(campo => campo.Codigo, StringComparer.Ordinal)
             .Select(grupo => grupo
-                .OrderByDescending(campo => !string.Equals(negocio, CodigoNegocioGlobal, StringComparison.Ordinal)
-                    && campo.NegocioCodigo == negocio)
+                .OrderByDescending(campo => campo.NegocioId == negocio)
                 .ThenByDescending(campo => campo.Proceso == proceso)
                 .ThenByDescending(campo => tipoPlanId is not null && campo.TipoPlanId == tipoPlanId)
                 .First())
@@ -48,17 +49,29 @@ public sealed partial class RepositorioSqlCatalogoCampos(RulesDbContext contexto
                 throw new InvalidOperationException("El catálogo contiene un campo activo sin operadores permitidos.");
             }
 
-            return new CampoReglaPermitido(campo.Codigo, LeerTipo(campo.TipoValor), operadores);
+            var tipoValor = campo.DatoRequerido is null
+                ? LeerTipo(campo.TipoValor)
+                : LeerTipo(campo.DatoRequerido.TipoDato.Nombre);
+            return new CampoReglaPermitido(campo.Codigo, tipoValor, operadores);
         }).ToList();
     }
 
-    private static TipoValorCampo LeerTipo(string codigo) => codigo switch
+    private static TipoValorCampo LeerTipo(string nombre)
     {
-        "TEXTO" => TipoValorCampo.Texto,
-        "NUMERO" => TipoValorCampo.Numero,
-        "BOOLEANO" => TipoValorCampo.Booleano,
-        _ => throw new InvalidOperationException("El catálogo contiene un tipo de valor desconocido.")
-    };
+        var tipoNormalizado = new string(nombre.Trim()
+            .Normalize(NormalizationForm.FormD)
+            .Where(caracter => CharUnicodeInfo.GetUnicodeCategory(caracter) != UnicodeCategory.NonSpacingMark)
+            .ToArray())
+            .ToUpperInvariant();
+
+        return tipoNormalizado switch
+        {
+            "TEXTO" => TipoValorCampo.Texto,
+            "NUMERO" => TipoValorCampo.Numero,
+            "BOOLEANO" => TipoValorCampo.Booleano,
+            _ => throw new InvalidOperationException("El tipo de dato Core no es compatible con RuleDefinition.")
+        };
+    }
 
     private static OperadorComparacion LeerOperador(CampoReglaOperadorEntity entidad) => entidad.Operador switch
     {

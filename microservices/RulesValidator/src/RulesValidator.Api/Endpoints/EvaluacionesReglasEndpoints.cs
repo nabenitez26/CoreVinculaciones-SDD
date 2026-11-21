@@ -52,7 +52,8 @@ public static class EvaluacionesReglasEndpoints
                 context,
                 StatusCodes.Status400BadRequest,
                 "Solicitud inválida",
-                "El encabezado X-Correlation-ID supera la longitud permitida.");
+                "El encabezado X-Correlation-ID supera la longitud permitida.",
+                "SOLICITUD_INVALIDA");
         }
 
         var mediaType = context.Request.ContentType?.Split(';', 2)[0].Trim();
@@ -62,7 +63,8 @@ public static class EvaluacionesReglasEndpoints
                 context,
                 StatusCodes.Status400BadRequest,
                 "Solicitud inválida",
-                "El cuerpo debe enviarse con el tipo de contenido application/json.");
+                "El cuerpo debe enviarse con el tipo de contenido application/json.",
+                "SOLICITUD_INVALIDA");
         }
 
         SolicitudEvaluacionReglasRequest? solicitud;
@@ -79,7 +81,8 @@ public static class EvaluacionesReglasEndpoints
                 context,
                 StatusCodes.Status400BadRequest,
                 "Solicitud inválida",
-                "El cuerpo no cumple el contrato JSON de la solicitud.");
+                "El cuerpo no cumple el contrato JSON de la solicitud.",
+                "SOLICITUD_INVALIDA");
         }
 
         if (solicitud is null)
@@ -88,7 +91,8 @@ public static class EvaluacionesReglasEndpoints
                 context,
                 StatusCodes.Status400BadRequest,
                 "Solicitud inválida",
-                "El cuerpo de la solicitud es obligatorio.");
+                "El cuerpo de la solicitud es obligatorio.",
+                "SOLICITUD_INVALIDA");
         }
 
         var erroresRequest = ValidarSolicitud(solicitud);
@@ -98,16 +102,17 @@ public static class EvaluacionesReglasEndpoints
                 context,
                 StatusCodes.Status400BadRequest,
                 "Solicitud inválida",
-                string.Join(" ", erroresRequest.Select(error => error.Mensaje)));
+                string.Join(" ", erroresRequest.Select(error => error.Mensaje)),
+                erroresRequest[0].Codigo);
         }
 
         var comando = new EvaluarReglasCommand(
-            solicitud.Negocio!,
-            solicitud.Proceso!,
+            solicitud.NegocioId,
+            solicitud.Proceso,
             solicitud.TipoPlanId,
-            solicitud.Etapa!.Value,
+            solicitud.Etapa,
             solicitud.FechaEvaluacion,
-            solicitud.Contexto!.Value,
+            JsonSerializer.SerializeToElement(solicitud.Contexto, OpcionesSolicitud),
             idCorrelacion,
             Activity.Current?.Id ?? context.TraceIdentifier);
         var resultado = await handler.HandleAsync(comando, cancellationToken);
@@ -119,13 +124,13 @@ public static class EvaluacionesReglasEndpoints
     {
         var errores = new List<ErrorProblemaResponse>();
 
-        if (string.IsNullOrWhiteSpace(solicitud.Negocio))
+        if (string.IsNullOrWhiteSpace(solicitud.NegocioId))
         {
-            errores.Add(new("SOLICITUD_INVALIDA", "El negocio es obligatorio.", "negocio"));
+            errores.Add(new("SOLICITUD_INVALIDA", "El negocio es obligatorio.", "negocioId"));
         }
-        else if (solicitud.Negocio.Length > 50)
+        else if (solicitud.NegocioId.Length > 20)
         {
-            errores.Add(new("SOLICITUD_INVALIDA", "El negocio supera la longitud permitida.", "negocio"));
+            errores.Add(new("SOLICITUD_INVALIDA", "El identificador del negocio supera la longitud permitida de 20 caracteres.", "negocioId"));
         }
 
         if (string.IsNullOrWhiteSpace(solicitud.Proceso))
@@ -142,24 +147,12 @@ public static class EvaluacionesReglasEndpoints
             errores.Add(new("SOLICITUD_INVALIDA", "tipoPlanId supera la longitud máxima de 10 caracteres.", "tipoPlanId"));
         }
 
-        if (string.Equals(solicitud.Proceso, "VINCULACION", StringComparison.OrdinalIgnoreCase))
-        {
-            if (string.IsNullOrWhiteSpace(solicitud.TipoPlanId))
-            {
-                errores.Add(new("SOLICITUD_INVALIDA", "tipoPlanId es obligatorio para el proceso VINCULACION.", "tipoPlanId"));
-            }
-        }
-        else if (solicitud.TipoPlanId is not null)
-        {
-            errores.Add(new("SOLICITUD_INVALIDA", "tipoPlanId solo se permite para el proceso VINCULACION.", "tipoPlanId"));
-        }
-
-        if (solicitud.Etapa is null or < 1)
+        if (solicitud.Etapa is < 1)
         {
             errores.Add(new("SOLICITUD_INVALIDA", "La etapa debe ser mayor que cero.", "etapa"));
         }
 
-        if (solicitud.Contexto is null || solicitud.Contexto.Value.ValueKind != JsonValueKind.Object)
+        if (solicitud.Contexto is null)
         {
             errores.Add(new("SOLICITUD_INVALIDA", "El contexto es obligatorio y debe ser un objeto JSON.", "contexto"));
         }
@@ -176,10 +169,11 @@ public static class EvaluacionesReglasEndpoints
         new(
             resultado.IdEvaluacion,
             resultado.IdCorrelacion,
-            resultado.DuracionMs,
             MapearEstadoGeneral(resultado.ResultadoGeneral),
-            resultado.FlujosReglas,
-            resultado.Resultados.Select(regla => new ResultadoEvaluacionReglaResponse(
+            resultado.FechaEvaluacion,
+            resultado.Resultados
+                .Where(regla => regla.Estado != EstadoEvaluacionRegla.NoAplica)
+                .Select(regla => new ResultadoEvaluacionReglaResponse(
                 regla.CodigoRegla,
                 regla.Version,
                 MapearEstado(regla.Estado),
@@ -191,7 +185,6 @@ public static class EvaluacionesReglasEndpoints
     {
         EstadoEvaluacionRegla.Cumple => "CUMPLE",
         EstadoEvaluacionRegla.NoCumple => "NO_CUMPLE",
-        EstadoEvaluacionRegla.NoAplica => "NO_APLICA",
         EstadoEvaluacionRegla.Indeterminado => "INDETERMINADO",
         _ => throw new ArgumentOutOfRangeException(nameof(estado), estado, null)
     };

@@ -56,7 +56,7 @@ Infrastructure implementa:
 2. Middleware obtiene o genera `idCorrelacion`.
 3. Handler genera `idEvaluacion` GUID.
 4. Handler determina `fechaEvaluacion` UTC mediante request o `IReloj`.
-5. Repository recupera flujos GLOBAL y del negocio solicitado.
+5. Repository recupera de `reglas.flujo_reglas` los flujos globales (`negocio_id IS NULL`) y los del `negocio_id` solicitado.
 6. Repository recupera el catálogo activo de campos y operadores desde Azure SQL.
 7. Filtra flujo, regla y versión por estado y vigencia.
 8. Deserializa `definicion_json` a `DefinicionRegla`.
@@ -65,7 +65,7 @@ Infrastructure implementa:
 11. Microsoft RulesEngine evalúa.
 12. Adapter normaliza resultados.
 13. Handler consolida resultadoGeneral.
-14. Persiste `ejecucion_regla`.
+14. Persiste `reglas.ejecucion_regla`, incluyendo fecha y etapa opcional.
 15. Emite trazas y métricas.
 16. API responde.
 
@@ -73,8 +73,8 @@ Infrastructure implementa:
 
 Se recuperan dos alcances, que pueden resolverse en una sola consulta SQL:
 
-- Flujos de `negocio.codigo = GLOBAL` limitados únicamente por `proceso`; no se filtran por etapa ni `tipo_plan_id`.
-- Flujos de `negocio.codigo = negocioSolicitado` filtrados por `proceso` y `etapa`; cuando el proceso es VINCULACION también por `tipo_plan_id`.
+- Flujos de `reglas.flujo_reglas` con `negocio_id = NULL`, limitados únicamente por `proceso`; no se filtran por etapa ni `tipo_plan_id`.
+- Flujos de `reglas.flujo_reglas` con `negocio_id = negocioSolicitado`, filtrados por `proceso` y `etapa`; cuando el proceso es VINCULACION también por `tipo_plan_id`.
 
 Los globales se ordenan antes de los específicos; dentro de cada alcance se ordena por prioridad de flujo y regla. Las reglas/versiones deben estar activas y vigentes.
 
@@ -89,7 +89,7 @@ Los globales se ordenan antes de los específicos; dentro de cada alcance se ord
 
 La BD no almacena expresiones ejecutables.
 
-El catálogo de campos y operadores se obtiene de Azure SQL una vez por evaluación, combinando GLOBAL y negocio/proceso/tipo de plan aplicables. La configuración específica reemplaza GLOBAL por ruta; no se cachea entre evaluaciones para que los cambios surtan efecto en la siguiente solicitud. El contexto es un objeto JSON plano cuyas claves pueden contener punto, por ejemplo `"pension.tipo"`.
+El catálogo de campos y operadores se obtiene de Azure SQL una vez por evaluación, combinando flujos globales y los scopes de negocio/proceso/tipo de plan aplicables. La configuración específica reemplaza el scope global por alias; no se cachea entre evaluaciones. El contexto es un objeto JSON plano con los aliases definidos por el catálogo y el contrato, por ejemplo `"pension.tipo"`.
 
 `IValidadorDefinicionRegla` valida:
 

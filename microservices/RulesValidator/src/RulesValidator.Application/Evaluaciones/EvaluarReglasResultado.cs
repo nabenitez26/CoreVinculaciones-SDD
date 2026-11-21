@@ -7,5 +7,6 @@ public sealed record EvaluarReglasResultado(
     string IdCorrelacion,
     long DuracionMs,
     EstadoEvaluacionGeneral ResultadoGeneral,
+    DateTime FechaEvaluacion,
     IReadOnlyList<string> FlujosReglas,
     IReadOnlyList<ResultadoEvaluacionRegla> Resultados);

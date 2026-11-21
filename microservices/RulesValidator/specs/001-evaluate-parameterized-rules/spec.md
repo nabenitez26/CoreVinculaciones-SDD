@@ -7,7 +7,7 @@ Evaluar reglas parametrizables activas y vigentes para un negocio, proceso y eta
 ## 2. Endpoint
 
 ```http
-POST /api/v1/evaluaciones-reglas
+POST /api/v1/evaluar-reglas
 ```
 
 Esta es la única ruta aprobada para Feature 001.
@@ -16,14 +16,14 @@ Esta es la única ruta aprobada para Feature 001.
 
 La solicitud contiene:
 
-- `negocio`, obligatorio;
+- `negocioId`, obligatorio y definido por el Core;
 - `proceso`, obligatorio;
-- `tipoPlanId`, identificador varchar de hasta 10 caracteres del plan asociado al tipo de vinculación, obligatorio cuando `proceso = VINCULACION`;
-- `etapa`, obligatoria y mayor que cero;
+- `tipoPlanId`, opcional; se informa cuando la selección de reglas depende del tipo de plan;
+- `etapa`, opcional; si se informa debe ser mayor que cero;
 - `fechaEvaluacion`, opcional, ISO 8601 UTC;
 - `contexto`, obligatorio.
 
-`contexto` es un objeto JSON plano. Sus claves son nombres funcionales en español, son rutas literales del catálogo dinámico y pueden contener puntos; no se representan como objetos anidados. Por ejemplo: `"pension.tipo"`, `"pension.mesadaEnSmlmv"`, `"persona.genero"`, `"persona.edad"`, `"persona.tipoDocumento"` y `"plan.codigo"`.
+`contexto` es un objeto JSON plano cuyas claves son aliases literales del catálogo y pueden contener puntos. El ejemplo del contrato usa `pension.tipo`, `pension.mesadaEnSmlmv`, `person.genero`, `person.edad` y `person.tipoDocumento`. `tipoPlanId` selecciona la configuración y no se repite como un campo del contexto.
 
 `idEvaluacion` no se recibe del consumidor. RulesValidator lo genera para cada ejecución.
 
@@ -33,22 +33,22 @@ Cuando `fechaEvaluacion` no se proporciona, Application usa el reloj inyectado y
 
 ## 4. Convención del campo de mesada
 
-El atributo funcional se denomina en todos los artefactos:
+El atributo de contexto se denomina:
 
 ```text
 pension.mesadaEnSmlmv
 ```
 
-No se permiten como sinónimos técnicos `AllowanceInSmlmv`, `subsidioEnSmlmv` ni `mesadaSmlmv`.
+El alias del contrato no se duplica con otro campo para expresar el tipo de plan.
 
 ## 5. Selección de reglas globales y específicas
 
-Existe un registro especial en `negocio` con `codigo = GLOBAL`.
+Un flujo global se identifica con `reglas.flujo_reglas.negocio_id = NULL`; no se crea un negocio GLOBAL duplicado en RulesValidator.
 
 Para una solicitud de negocio `SALUD`, RulesValidator selecciona:
 
-1. flujos activos de GLOBAL limitados únicamente al mismo proceso;
-2. flujos activos de SALUD para el mismo proceso y etapa, y el mismo `tipo_plan_id` si el proceso es VINCULACION.
+1. flujos activos globales (`negocio_id = NULL`) limitados únicamente al mismo proceso;
+2. flujos activos de `SALUD` para el mismo proceso, etapa cuando fue informada y `tipo_plan_id` cuando fue informado.
 
 Las reglas globales se evalúan primero. Después se evalúan las reglas específicas ordenadas por prioridad.
 
@@ -124,14 +124,12 @@ Código: `ERR-MESADA-MINIMA`
 
 ### RV-002 - Tope TP-01
 
-Aplicabilidad: `plan.codigo = TP-01`  
+El flujo asociado selecciona RV-002 para `tipoPlanId = TP-01`. La regla no vuelve a comparar el plan dentro del contexto.  
 Condición: `pension.mesadaEnSmlmv <= 1.5`  
 Severidad: BLOQUEANTE  
 Código: `ERR-MESADA-TP01`
 
-Si `plan.codigo` no es TP-01, RV-002 retorna `NO_APLICA`.
-
-Su definición neutral utiliza `aplicabilidad` para `plan.codigo = TP-01` y la condición principal para el tope de mesada. La condición principal no se evalúa cuando la regla no aplica.
+Un request con otro `tipoPlanId` selecciona su propio flujo; no envía el identificador de plan dentro del contexto para decidir la aplicabilidad de RV-002.
 
 ## 10. Definición activa inválida
 
@@ -144,14 +142,15 @@ Si una versión ACTIVA no supera validación:
 
 ## 11. Observabilidad
 
-La respuesta 200 incluye:
+La respuesta 200 se limita al esquema OpenAPI e incluye:
 
 - idEvaluacion generado;
 - idCorrelacion;
-- duracionMs;
 - resultadoGeneral;
-- flujosReglas;
+- fechaEvaluacion efectiva;
 - resultados individuales.
+
+Los resultados públicos individuales solo usan `CUMPLE`, `NO_CUMPLE` e `INDETERMINADO`, según el enum de `rules-api.yaml`. `NO_APLICA` se resuelve internamente y no se serializa como resultado público.
 
 ## 12. Fuera de alcance
 

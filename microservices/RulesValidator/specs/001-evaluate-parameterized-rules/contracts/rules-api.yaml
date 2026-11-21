@@ -1,178 +1,304 @@
 openapi: 3.0.3
+
 info:
-  title: API Validador de Reglas
+  title: RulesValidator API
   version: 1.0.0
-servers:
-  - url: /api/v1
+  description: API para evaluación de reglas parametrizables.
+
 paths:
-  /evaluaciones-reglas:
+
+  /api/v1/evaluar-reglas:
     post:
-      summary: Evaluar reglas de negocio
+      summary: Evaluar reglas
+      description: >
+        Evalúa las reglas activas y vigentes aplicables al contexto solicitado.
+        RulesValidator determina los flujos aplicables a partir del negocio,
+        proceso, tipo de plan y etapa.
+
+        El contexto contiene únicamente los datos dinámicos necesarios para
+        evaluar las RuleDefinition seleccionadas.
+
+        El consumidor no envía expresiones ejecutables ni expresiones de
+        Microsoft RulesEngine.
+
       operationId: evaluarReglas
+
+      tags:
+        - EvaluarReglas
+
       parameters:
+
         - name: X-Correlation-ID
           in: header
           required: false
+          description: >
+            Identificador de correlación proporcionado por el consumidor.
+            Si no se proporciona, RulesValidator genera uno.
           schema:
             type: string
             maxLength: 100
+
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SolicitudEvaluacionReglas'
+              $ref: '#/components/schemas/EvaluarReglasRequest'
+
+            examples:
+
+              pensionadoTp01:
+                summary: Evaluación de vinculación TP-01
+                value:
+                  negocioId: SALUD
+                  proceso: VINCULACION
+                  tipoPlanId: TP-01
+                  etapa: 4
+                  fechaEvaluacion: '2026-11-21T15:30:00Z'
+                  contexto:
+                    pension.tipo: Vejez
+                    pension.mesadaEnSmlmv: 1.3
+                    person.genero: M
+                    person.edad: 64
+                    person.tipoDocumento: CC
+
       responses:
+
         '200':
-          description: Evaluación procesada.
+          description: Evaluación ejecutada correctamente.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RespuestaEvaluacionReglas'
+                $ref: '#/components/schemas/EvaluarReglasResponse'
+
         '400':
           description: Solicitud inválida.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/DetalleProblema'
+                $ref: '#/components/schemas/ProblemDetails'
+
         '404':
-          description: No existe configuración aplicable.
+          description: >
+            No existe el negocio, tipo de plan o configuración necesaria
+            para resolver la evaluación solicitada.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/DetalleProblema'
+                $ref: '#/components/schemas/ProblemDetails'
+
         '422':
-          description: Solicitud no procesable.
+          description: >
+            El contexto recibido no permite realizar una evaluación válida.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/DetalleProblema'
+                $ref: '#/components/schemas/ProblemDetails'
+
         '500':
-          description: Error interno controlado.
+          description: Error interno durante la evaluación.
           content:
             application/problem+json:
               schema:
-                $ref: '#/components/schemas/DetalleProblema'
+                $ref: '#/components/schemas/ProblemDetails'
+
+
 components:
+
   schemas:
-    SolicitudEvaluacionReglas:
+
+    EvaluarReglasRequest:
       type: object
       additionalProperties: false
-      required: [negocio, proceso, etapa, contexto]
+
+      required:
+        - negocioId
+        - proceso
+        - contexto
+
       properties:
-        negocio:
+
+        negocioId:
           type: string
-          maxLength: 50
-          example: PENSIONADOS
+          maxLength: 20
+          description: >
+            Identificador del negocio definido por el Core de Vinculaciones.
+            Ejemplos: SALUD, CAJA.
+          example: SALUD
+
         proceso:
           type: string
+          minLength: 1
           maxLength: 100
+          description: >
+            Código del proceso para el cual se solicita la evaluación.
           example: VINCULACION
+
         tipoPlanId:
           type: string
           maxLength: 10
-          description: Código del plan que corresponde al tipo de vinculación; obligatorio cuando proceso es VINCULACION.
+          nullable: true
+          description: >
+            Identificador del tipo de plan definido en el Core de
+            Vinculaciones. Es requerido funcionalmente cuando el proceso
+            necesita discriminar las reglas por tipo de plan.
           example: TP-01
+
         etapa:
           type: integer
-          format: int32
           minimum: 1
+          nullable: true
+          description: >
+            Etapa del proceso que se desea evaluar. Solo se informa cuando
+            el proceso utiliza etapas.
           example: 4
+
         fechaEvaluacion:
           type: string
           format: date-time
-          description: Fecha opcional ISO 8601 UTC. Si falta se usa el reloj UTC del servicio.
-          example: '2026-11-18T23:00:00Z'
+          nullable: true
+          description: >
+            Fecha UTC utilizada para determinar la vigencia de las reglas.
+            Si no se informa, RulesValidator utiliza la fecha UTC actual
+            proporcionada por su reloj de aplicación.
+          example: '2026-11-21T15:30:00Z'
+
         contexto:
           type: object
+          description: >
+            Diccionario dinámico con los valores disponibles para evaluar las
+            reglas seleccionadas. Los nombres deben corresponder con campos
+            autorizados por RulesValidator.
+
+            Los campos necesarios son determinados por las reglas activas y
+            vigentes aplicables a la evaluación.
+
+            No debe repetir tipoPlanId como un campo del contexto.
           additionalProperties: true
           example:
             pension.tipo: Vejez
-            pension.mesadaEnSmlmv: 1.4
-            plan.codigo: TP-01
-            persona.genero: M
-            persona.edad: 64
-            persona.tipoDocumento: CC
-    RespuestaEvaluacionReglas:
+            pension.mesadaEnSmlmv: 1.3
+            person.genero: M
+            person.edad: 64
+            person.tipoDocumento: CC
+
+
+    EvaluarReglasResponse:
       type: object
-      required: [idEvaluacion, idCorrelacion, duracionMs, resultadoGeneral, flujosReglas, resultados]
+      additionalProperties: false
+
+      required:
+        - idEvaluacion
+        - idCorrelacion
+        - resultadoGeneral
+        - fechaEvaluacion
+        - resultados
+
       properties:
+
         idEvaluacion:
           type: string
           format: uuid
+          description: >
+            Identificador generado por RulesValidator para la evaluación.
+
         idCorrelacion:
           type: string
-        duracionMs:
-          type: integer
-          format: int64
-          minimum: 0
+          maxLength: 100
+          description: >
+            Identificador de correlación recibido o generado por
+            RulesValidator.
+
         resultadoGeneral:
-          $ref: '#/components/schemas/EstadoEvaluacionGeneral'
-        flujosReglas:
-          type: array
-          items:
-            type: string
+          type: string
+          enum:
+            - CUMPLE
+            - NO_CUMPLE
+            - INDETERMINADO
+          description: Resultado consolidado de la evaluación.
+
+        fechaEvaluacion:
+          type: string
+          format: date-time
+
         resultados:
           type: array
           items:
-            $ref: '#/components/schemas/ResultadoEvaluacionRegla'
-    ResultadoEvaluacionRegla:
+            $ref: '#/components/schemas/ResultadoRegla'
+
+
+    ResultadoRegla:
       type: object
-      required: [codigoRegla, version, estado, severidad]
+      additionalProperties: false
+
+      required:
+        - codigoRegla
+        - version
+        - resultado
+        - severidad
+
       properties:
+
         codigoRegla:
           type: string
+          maxLength: 50
+          example: RV-002
+
         version:
           type: integer
           minimum: 1
-        estado:
-          $ref: '#/components/schemas/EstadoEvaluacionRegla'
+          example: 1
+
+        resultado:
+          type: string
+          enum:
+            - CUMPLE
+            - NO_CUMPLE
+            - INDETERMINADO
+
         severidad:
-          $ref: '#/components/schemas/SeveridadRegla'
+          type: string
+          enum:
+            - INFORMATIVA
+            - ADVERTENCIA
+            - BLOQUEANTE
+
         codigoError:
           type: string
           nullable: true
+          maxLength: 100
+          example: ERR-RV-002
+
         mensaje:
           type: string
           nullable: true
-    EstadoEvaluacionRegla:
-      type: string
-      enum: [CUMPLE, NO_CUMPLE, NO_APLICA, INDETERMINADO]
-    EstadoEvaluacionGeneral:
-      type: string
-      enum: [CUMPLE, NO_CUMPLE, INDETERMINADO]
-    SeveridadRegla:
-      type: string
-      enum: [INFORMATIVA, ADVERTENCIA, BLOQUEANTE]
-    DetalleProblema:
+          maxLength: 1000
+          example: >
+            La mesada pensional supera el límite permitido.
+
+
+    ProblemDetails:
       type: object
-      required: [type, title, status, detail, instance, idTraza, idCorrelacion]
+
       properties:
+
         type:
           type: string
-          format: uri
+
         title:
           type: string
+
         status:
           type: integer
+
         detail:
           type: string
+
         instance:
           type: string
-        idTraza:
+
+        codigo:
           type: string
+
         idCorrelacion:
           type: string
-        errors:
-          type: array
-          items:
-            type: object
-            required: [codigo, mensaje]
-            properties:
-              codigo:
-                type: string
-              mensaje:
-                type: string
-              campo:
-                type: string
-                nullable: true

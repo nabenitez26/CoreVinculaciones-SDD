@@ -4,16 +4,15 @@ namespace RulesValidator.Api.Dtos;
 public sealed record EvaluacionReglasResponse(
     Guid IdEvaluacion,
     string IdCorrelacion,
-    long DuracionMs,
     string ResultadoGeneral,
-    IReadOnlyList<string> FlujosReglas,
+    DateTime FechaEvaluacion,
     IReadOnlyList<ResultadoEvaluacionReglaResponse> Resultados);
 
 /// <summary>Representa el resultado normalizado de una regla.</summary>
 public sealed record ResultadoEvaluacionReglaResponse(
     string CodigoRegla,
     int Version,
-    string Estado,
+    string Resultado,
     string Severidad,
     string? CodigoError,
     string? Mensaje);
@@ -25,9 +24,8 @@ public sealed record DetalleProblemaResponse(
     int Status,
     string Detail,
     string Instance,
-    string IdTraza,
-    string IdCorrelacion,
-    IReadOnlyList<ErrorProblemaResponse>? Errors = null);
+    string Codigo,
+        string IdCorrelacion);
 
 /// <summary>Describe un error validado de la solicitud.</summary>
 public sealed record ErrorProblemaResponse(string Codigo, string Mensaje, string? Campo = null);

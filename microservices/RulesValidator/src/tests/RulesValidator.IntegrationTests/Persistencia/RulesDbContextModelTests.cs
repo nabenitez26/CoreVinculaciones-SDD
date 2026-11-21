@@ -16,45 +16,57 @@ public sealed class RulesDbContextModelTests
     }
 
     [Fact]
-    public void Mapea_las_siete_tablas_del_modelo()
+    public void Mapea_las_seis_tablas_de_reglas_y_no_duplica_catalogos_core()
     {
         using var contexto = CrearContexto();
-        var nombres = contexto.Model.GetEntityTypes().Select(e => e.GetTableName()).ToHashSet();
+        var tablasReglas = contexto.Model.GetEntityTypes()
+            .Where(entidad => entidad.GetSchema() == "reglas")
+            .Select(entidad => entidad.GetTableName())
+            .OfType<string>()
+            .ToHashSet();
 
-        Assert.Contains("campo_regla", nombres);
-        Assert.Contains("campo_regla_operador", nombres);
-        Assert.Contains("negocio", nombres);
-        Assert.Contains("flujo_reglas", nombres);
-        Assert.Contains("regla", nombres);
-        Assert.Contains("version_regla", nombres);
-        Assert.Contains("ejecucion_regla", nombres);
+        Assert.Equal(["campo_regla", "campo_regla_operador", "ejecucion_regla", "flujo_reglas", "regla", "version_regla"], tablasReglas.Order().ToArray());
+        Assert.Equal("ref", contexto.Model.FindEntityType(typeof(NegocioCoreEntity))!.GetSchema());
+        Assert.Equal("mae", contexto.Model.FindEntityType(typeof(TipoPlanCoreEntity))!.GetSchema());
+        Assert.Equal("mae", contexto.Model.FindEntityType(typeof(TipoContratoCoreEntity))!.GetSchema());
+        Assert.Equal("mae", contexto.Model.FindEntityType(typeof(TipoVinculacionCoreEntity))!.GetSchema());
+        Assert.Equal("cfg", contexto.Model.FindEntityType(typeof(DatoRequeridoCoreEntity))!.GetSchema());
     }
 
     [Fact]
     public void Configura_claves_primarias_foraneas_y_unicas()
     {
         using var contexto = CrearContexto();
-        var negocio = contexto.Model.FindEntityType(typeof(NegocioEntity))!;
+        var negocio = contexto.Model.FindEntityType(typeof(NegocioCoreEntity))!;
+        var tipoPlan = contexto.Model.FindEntityType(typeof(TipoPlanCoreEntity))!;
+        var tipoContratoCore = contexto.Model.FindEntityType(typeof(TipoContratoCoreEntity))!;
+        var tipoVinculacionCore = contexto.Model.FindEntityType(typeof(TipoVinculacionCoreEntity))!;
         var campo = contexto.Model.FindEntityType(typeof(CampoReglaEntity))!;
         var operadorCampo = contexto.Model.FindEntityType(typeof(CampoReglaOperadorEntity))!;
         var flujo = contexto.Model.FindEntityType(typeof(FlujoReglasEntity))!;
+        var datoRequerido = contexto.Model.FindEntityType(typeof(DatoRequeridoCoreEntity))!;
         var regla = contexto.Model.FindEntityType(typeof(ReglaEntity))!;
         var version = contexto.Model.FindEntityType(typeof(VersionReglaEntity))!;
         var ejecucion = contexto.Model.FindEntityType(typeof(EjecucionReglaEntity))!;
 
-        Assert.Contains(negocio.GetKeys(), k => k.IsPrimaryKey() && k.GetName() == "PK_negocio");
-        Assert.Contains(negocio.GetKeys(), k => !k.IsPrimaryKey() && k.GetName() == "UK_negocio_codigo");
+        Assert.Contains(negocio.GetKeys(), k => k.IsPrimaryKey());
+        Assert.Single(tipoPlan.GetForeignKeys());
+        Assert.Single(tipoContratoCore.GetForeignKeys());
+        Assert.Single(tipoVinculacionCore.GetForeignKeys());
+        Assert.Contains(tipoPlan.GetKeys(), k => k.IsPrimaryKey());
+        Assert.Contains(datoRequerido.GetKeys(), k => k.IsPrimaryKey());
         Assert.Contains(campo.GetKeys(), k => k.IsPrimaryKey() && k.GetName() == "PK_campo_regla");
         Assert.Contains(operadorCampo.GetKeys(), k => k.IsPrimaryKey() && k.GetName() == "PK_campo_regla_operador");
         Assert.Contains(flujo.GetKeys(), k => !k.IsPrimaryKey() && k.GetName() == "UK_flujo_reglas_codigo");
         Assert.Contains(regla.GetKeys(), k => !k.IsPrimaryKey() && k.GetName() == "UK_regla_flujo_codigo");
         Assert.Contains(version.GetKeys(), k => !k.IsPrimaryKey() && k.GetName() == "UK_version_regla_regla_version");
         Assert.Contains(ejecucion.GetKeys(), k => !k.IsPrimaryKey() && k.GetName() == "UK_ejecucion_regla_id_evaluacion");
-        Assert.Single(flujo.GetForeignKeys());
+        Assert.Equal(2, flujo.GetForeignKeys().Count());
+        Assert.Equal(3, campo.GetForeignKeys().Count());
         Assert.Single(operadorCampo.GetForeignKeys());
         Assert.Single(regla.GetForeignKeys());
         Assert.Single(version.GetForeignKeys());
-        Assert.Single(ejecucion.GetForeignKeys());
+        Assert.Equal(2, ejecucion.GetForeignKeys().Count());
     }
 
     [Fact]
@@ -72,11 +84,12 @@ public sealed class RulesDbContextModelTests
         Assert.Contains(campo.GetIndexes(), i => i.GetDatabaseName() == "UX_campo_regla_scope_codigo" && i.IsUnique);
         Assert.Contains(campo.GetIndexes(), i => i.GetDatabaseName() == "IX_campo_regla_scope_activo");
         Assert.True(flujo.FindProperty(nameof(FlujoReglasEntity.Etapa))!.IsNullable);
-        Assert.False(ejecucion.FindProperty(nameof(EjecucionReglaEntity.Etapa))!.IsNullable);
+        Assert.True(ejecucion.FindProperty(nameof(EjecucionReglaEntity.Etapa))!.IsNullable);
         Assert.Contains(campo.GetCheckConstraints(), c => c.Name == "CK_campo_regla_tipo_valor");
         Assert.Contains(operadorCampo.GetCheckConstraints(), c => c.Name == "CK_campo_regla_operador_codigo");
         Assert.Contains(flujo.GetCheckConstraints(), c => c.Name == "CK_flujo_reglas_etapa");
         Assert.Contains(flujo.GetCheckConstraints(), c => c.Name == "CK_flujo_reglas_prioridad");
+        Assert.Contains(flujo.GetCheckConstraints(), c => c.Name == "CK_flujo_reglas_tipo_plan_negocio");
         Assert.Contains(regla.GetCheckConstraints(), c => c.Name == "CK_regla_tipo_regla");
         Assert.Contains(regla.GetCheckConstraints(), c => c.Name == "CK_regla_prioridad");
         Assert.Contains(version.GetCheckConstraints(), c => c.Name == "CK_version_regla_estado");

@@ -6,7 +6,7 @@ Content-Type: application/json
 X-Correlation-ID: prueba-rules-validator-001
 
 {
-  "negocio": "SALUD",
+  "negocioId": "SALUD",
   "proceso": "VINCULACION",
   "tipoPlanId": "TP-01",
   "etapa": 4,

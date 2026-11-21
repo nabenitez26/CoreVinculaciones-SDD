@@ -16,20 +16,10 @@ public sealed class RepositorioSqlEjecucionesReglas(RulesDbContext contexto) : I
     {
         ArgumentNullException.ThrowIfNull(ejecucion);
 
-        var negocioId = await contexto.Negocios
-            .Where(n => n.Codigo == ejecucion.Negocio)
-            .Select(n => (long?)n.NegocioId)
-            .SingleOrDefaultAsync(cancellationToken);
-
-        if (negocioId is null)
-        {
-            throw new InvalidOperationException("No se encontró el negocio asociado a la ejecución de reglas.");
-        }
-
         var entidad = new EjecucionReglaEntity
         {
             IdEvaluacion = ejecucion.IdEvaluacion,
-            NegocioId = negocioId.Value,
+            NegocioId = ejecucion.Negocio,
             Proceso = ejecucion.Proceso,
             TipoPlanId = ejecucion.TipoPlanId,
             Etapa = ejecucion.Etapa,

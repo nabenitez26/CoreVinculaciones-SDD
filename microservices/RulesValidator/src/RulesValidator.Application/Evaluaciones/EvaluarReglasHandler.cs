@@ -106,6 +106,7 @@ public sealed class EvaluarReglasHandler(
             command.IdCorrelacion,
             duracionMs,
             resultadoGeneral,
+            fechaEvaluacion,
             codigosFlujos,
             resultados);
         }

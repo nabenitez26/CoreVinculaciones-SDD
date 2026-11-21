@@ -7,30 +7,47 @@ namespace RulesValidator.Infrastructure.Persistencia.Repositorios;
 
 public sealed class RepositorioSqlReglas(RulesDbContext contexto) : IRepositorioReglas
 {
-    private const string CodigoNegocioGlobal = "GLOBAL";
-
     public async Task<IReadOnlyList<FlujoReglas>> ObtenerFlujosAplicablesAsync(
         string negocio,
         string proceso,
         string? tipoPlanId,
-        int etapa,
+        int? etapa,
         DateTime fechaEvaluacion,
         CancellationToken cancellationToken)
     {
-        var requiereTipoPlan = string.Equals(proceso, "VINCULACION", StringComparison.OrdinalIgnoreCase);
-        var codigosNegocio = string.Equals(negocio, CodigoNegocioGlobal, StringComparison.Ordinal)
-            ? [CodigoNegocioGlobal]
-            : new[] { CodigoNegocioGlobal, negocio };
+        if (tipoPlanId is not null)
+        {
+            var negocioDelPlan = await contexto.TiposPlanCore
+                .AsNoTracking()
+                .Where(plan => plan.TipoPlanId == tipoPlanId)
+                .Select(plan => plan.TipoContrato.TipoVinculacion.NegocioId)
+                .SingleOrDefaultAsync(cancellationToken);
+
+            if (negocioDelPlan is null || negocioDelPlan != negocio)
+            {
+                return [];
+            }
+        }
+
+        var flujosConPlanDeOtroNegocio = await contexto.FlujosReglas
+            .AsNoTracking()
+            .Where(flujo => flujo.NegocioId == negocio && flujo.Proceso == proceso && flujo.TipoPlanId != null)
+            .AnyAsync(flujo => flujo.TipoPlan!.TipoContrato.TipoVinculacion.NegocioId != negocio, cancellationToken);
+
+        if (flujosConPlanDeOtroNegocio)
+        {
+            throw new InvalidOperationException("Un flujo de reglas referencia un tipo de plan de otro negocio Core.");
+        }
 
         var entidades = await contexto.FlujosReglas
             .AsNoTracking()
-            .Where(f => codigosNegocio.Contains(f.Negocio.Codigo)
+            .Where(f => (f.NegocioId == null || f.NegocioId == negocio)
                 && f.Activo
                 && f.Proceso == proceso
-                && ((f.Negocio.Codigo == CodigoNegocioGlobal)
-                    || (f.Negocio.Codigo == negocio
+                && ((f.NegocioId == null)
+                    || (f.NegocioId == negocio
                         && f.Etapa == etapa
-                        && f.TipoPlanId == (requiereTipoPlan ? tipoPlanId : null)))
+                        && f.TipoPlanId == tipoPlanId))
                 && f.Reglas.Any(r => r.Activo
                     && r.Versiones.Any(v => v.Estado == "ACTIVA"
                         && v.FechaInicioVigencia <= fechaEvaluacion
@@ -45,7 +62,7 @@ public sealed class RepositorioSqlReglas(RulesDbContext contexto) : IRepositorio
                     && v.FechaInicioVigencia <= fechaEvaluacion
                     && (v.FechaFinVigencia == null || fechaEvaluacion <= v.FechaFinVigencia))
                 .OrderBy(v => v.Version))
-            .OrderBy(f => f.Negocio.Codigo == CodigoNegocioGlobal ? 0 : 1)
+            .OrderBy(f => f.NegocioId == null ? 0 : 1)
             .ThenBy(f => f.Prioridad)
             .ThenBy(f => f.Codigo)
             .ToListAsync(cancellationToken);

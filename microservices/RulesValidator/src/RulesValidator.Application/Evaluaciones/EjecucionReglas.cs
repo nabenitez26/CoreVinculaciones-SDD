@@ -7,7 +7,7 @@ public sealed record EjecucionReglas(
     string Negocio,
     string Proceso,
     string? TipoPlanId,
-    int Etapa,
+    int? Etapa,
     IReadOnlyList<string> FlujosReglas,
     EstadoEvaluacionGeneral ResultadoGeneral,
     IReadOnlyList<ResultadoEvaluacionRegla> Resultados,

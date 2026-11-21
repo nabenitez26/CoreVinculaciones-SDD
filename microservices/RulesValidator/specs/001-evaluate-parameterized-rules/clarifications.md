@@ -5,12 +5,12 @@
 La ruta oficial es:
 
 ```http
-POST /api/v1/evaluaciones-reglas
+POST /api/v1/evaluar-reglas
 ```
 
 ## C-002 Mesada
 
-El nombre único es `pension.mesadaEnSmlmv`. El valor llega normalizado en SMLMV.
+El alias del contrato para la mesada es `pension.mesadaEnSmlmv`. El valor llega normalizado en SMLMV.
 
 ## C-003 idEvaluacion
 
@@ -22,7 +22,7 @@ Es opcional y se expresa en ISO 8601 UTC. Si falta, Application usa `IClock.UtcN
 
 ## C-005 Reglas globales
 
-`GLOBAL` es un negocio especial. Para cada evaluación se combinan flujos GLOBAL y del negocio solicitado que coincidan en proceso y etapa.
+Los flujos globales tienen `reglas.flujo_reglas.negocio_id = NULL`; no existe una fila GLOBAL duplicada. Para cada evaluación se combinan los flujos globales aplicables y los del `negocio_id` solicitado.
 
 ## C-006 NO_APLICA
 
@@ -54,12 +54,12 @@ Un campo conocido de `contexto` presente con un tipo JSON incompatible se retorn
 
 ## C-013 Catálogo dinámico de campos
 
-Los campos, tipos y operadores permitidos se administran en las tablas `campo_regla` y `campo_regla_operador` de Azure SQL mediante un proceso externo, con scope GLOBAL o negocio/proceso/tipo de plan. RulesValidator carga y combina el catálogo aplicable una vez por evaluación, sin cache entre requests. Las entradas específicas reemplazan GLOBAL por ruta y se usan desde la siguiente evaluación. Una entrada específica inactiva también reemplaza y suprime el fallback GLOBAL de esa ruta.
+Los aliases y operadores permitidos se administran en `reglas.campo_regla` y `reglas.campo_regla_operador`, con scope global o negocio/proceso/tipo de plan. `reglas.campo_regla.dato_requerido_id` mapea el alias a `cfg.dato_requerido`; el Core conserva tipo, captura, fuentes y exigibilidad. RulesValidator carga el allow-list aplicable una vez por evaluación, sin cache entre requests. Una entrada específica reemplaza el scope global por alias, incluso cuando está inactiva.
 
 ## C-014 Alcance de globales y tipo de plan
 
-Las reglas de GLOBAL se limitan únicamente por proceso y aplican en cualquier negocio, etapa y `tipoPlanId` de ese proceso. Los flujos GLOBAL se almacenan con `etapa = NULL` y `tipo_plan_id = NULL`. Los flujos específicos se seleccionan por negocio, proceso y etapa; cuando el proceso es VINCULACION también deben coincidir con `tipo_plan_id`. El request usa `tipoPlanId`; SQL usa `tipo_plan_id`, varchar de máximo 10 caracteres. `tipoPlanId` identifica el plan asociado al tipo de vinculación (por ejemplo TP-01); es obligatorio en VINCULACION y se omite en otros procesos.
+Los registros de `reglas.flujo_reglas` con `negocio_id = NULL` se limitan únicamente por proceso y aplican en cualquier negocio, etapa y `tipoPlanId` de ese proceso. Usan `etapa = NULL` y `tipo_plan_id = NULL`. Los flujos específicos se seleccionan por `negocio_id`, proceso y etapa; para VINCULACION también por `tipo_plan_id`. Este último referencia `mae.tipo_plan.tipo_plan_id` (`nvarchar(10)`).
 
 ## C-015 Contexto plano
 
-El contexto es un objeto JSON plano. Sus claves son literales de catálogo, pueden contener puntos y usan nombres funcionales en español, por ejemplo `pension.tipo`, `pension.mesadaEnSmlmv`, `persona.genero`, `persona.edad`, `persona.tipoDocumento` y `plan.codigo`. El tipo de vinculación/plan ya se establece con negocio, proceso y `tipoPlanId`; no se repite dentro de `contexto`.
+El contexto es un objeto JSON plano. Los aliases del ejemplo OpenAPI son `pension.tipo`, `pension.mesadaEnSmlmv`, `person.genero`, `person.edad` y `person.tipoDocumento`. `tipoPlanId` participa en la selección del flujo y no se repite como campo del contexto.

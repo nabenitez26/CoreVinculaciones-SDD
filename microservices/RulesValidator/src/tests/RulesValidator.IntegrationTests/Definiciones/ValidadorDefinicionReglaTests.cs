@@ -15,8 +15,6 @@ public sealed class ValidadorDefinicionReglaTests
             OperadorComparacion.Igual, OperadorComparacion.Diferente, OperadorComparacion.Mayor,
             OperadorComparacion.MayorIgual, OperadorComparacion.Menor, OperadorComparacion.MenorIgual,
             OperadorComparacion.En, OperadorComparacion.NoEn),
-        CrearCampo("plan.codigo", TipoValorCampo.Texto,
-            OperadorComparacion.Igual, OperadorComparacion.Diferente, OperadorComparacion.En, OperadorComparacion.NoEn)
     ];
 
     private readonly ValidadorDefinicionRegla _validador = new();
@@ -26,7 +24,7 @@ public sealed class ValidadorDefinicionReglaTests
     [InlineData("pension.tipo", "EN", "[\"Vejez\",\"Invalidez\"]")]
     [InlineData("pension.mesadaEnSmlmv", "MAYOR_IGUAL", "1")]
     [InlineData("pension.mesadaEnSmlmv", "MENOR_IGUAL", "1.5")]
-    [InlineData("plan.codigo", "NO_EN", "[\"TP-01\",\"TP-02\"]")]
+    [InlineData("pension.tipo", "NO_EN", "[\"Vejez\",\"Invalidez\"]")]
     public void Definicion_con_campo_y_operador_configurados_es_valida(string campo, string operador, string valor)
     {
         var resultado = Validar(CrearCondicion(campo, operador, valor));
@@ -50,10 +48,11 @@ public sealed class ValidadorDefinicionReglaTests
 
     [Theory]
     [InlineData("cliente.nombre", "IGUAL", "\"Ana\"")]
+    [InlineData("plan.code", "IGUAL", "\"TP-01\"")]
     [InlineData("pension.tipo", "MAYOR", "1")]
     [InlineData("pension.mesadaEnSmlmv", "MAYOR_IGUAL", "\"1\"")]
     [InlineData("pension.tipo", "EN", "[\"Vejez\",1]")]
-    [InlineData("plan.codigo", "MENOR_IGUAL", "\"TP-01\"")]
+    [InlineData("pension.tipo", "MENOR_IGUAL", "\"Vejez\"")]
     public void Campo_operador_o_tipo_no_configurado_se_rechaza(string campo, string operador, string valor)
     {
         var resultado = Validar(CrearCondicion(campo, operador, valor));
@@ -74,9 +73,9 @@ public sealed class ValidadorDefinicionReglaTests
               "valor": 1.5,
               "aplicabilidad": {
                 "tipo": "CONDICION",
-                "campo": "plan.codigo",
+                "campo": "pension.tipo",
                 "operador": "IGUAL",
-                "valor": "TP-01"
+                "valor": "Vejez"
               }
             }
             """;
@@ -110,7 +109,7 @@ public sealed class ValidadorDefinicionReglaTests
     {
         var valores = string.Join(",", Enumerable.Range(1, 51).Select(i => $"\"T{i}\""));
 
-        Assert.False(Validar(CrearCondicion("plan.codigo", "EN", $"[{valores}]")).EsValida);
+        Assert.False(Validar(CrearCondicion("pension.tipo", "EN", $"[{valores}]")).EsValida);
     }
 
     [Fact]
@@ -118,7 +117,7 @@ public sealed class ValidadorDefinicionReglaTests
     {
         var valores = string.Join(",", Enumerable.Range(1, 50).Select(i => $"\"T{i}\""));
 
-        Assert.True(Validar(CrearCondicion("plan.codigo", "EN", $"[{valores}]")).EsValida);
+        Assert.True(Validar(CrearCondicion("pension.tipo", "EN", $"[{valores}]")).EsValida);
     }
 
     [Fact]

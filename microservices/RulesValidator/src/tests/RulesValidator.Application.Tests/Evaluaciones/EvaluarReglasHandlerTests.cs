@@ -10,11 +10,13 @@ namespace RulesValidator.Application.Tests.Evaluaciones;
 internal sealed class RepositorioReglasFalso(IReadOnlyList<FlujoReglas> flujos) : IRepositorioReglas
 {
     public DateTime? FechaRecibida { get; private set; }
+    public int? EtapaRecibida { get; private set; }
 
     public Task<IReadOnlyList<FlujoReglas>> ObtenerFlujosAplicablesAsync(
-        string negocio, string proceso, string? tipoPlanId, int etapa, DateTime fechaEvaluacion, CancellationToken cancellationToken)
+        string negocio, string proceso, string? tipoPlanId, int? etapa, DateTime fechaEvaluacion, CancellationToken cancellationToken)
     {
         FechaRecibida = fechaEvaluacion;
+        EtapaRecibida = etapa;
         return Task.FromResult(flujos);
     }
 }
@@ -57,13 +59,6 @@ internal sealed class RepositorioCatalogoCamposFalso : IRepositorioCatalogoCampo
                 OperadorComparacion.En,
                 OperadorComparacion.NoEn
             }),
-            new("plan.codigo", TipoValorCampo.Texto, new HashSet<OperadorComparacion>
-            {
-                OperadorComparacion.Igual,
-                OperadorComparacion.Diferente,
-                OperadorComparacion.En,
-                OperadorComparacion.NoEn
-            })
         ]);
 }
 
@@ -129,13 +124,14 @@ public sealed class EvaluarReglasHandlerTests
         var handler = CrearHandler(repositorio);
 
         var antes = DateTime.UtcNow;
-        await handler.HandleAsync(Comando(fecha: null), CancellationToken.None);
+        var resultado = await handler.HandleAsync(Comando(fecha: null), CancellationToken.None);
         var despues = DateTime.UtcNow;
 
         var recibida = Assert.IsType<DateTime>(repositorio.FechaRecibida);
         Assert.Equal(DateTimeKind.Utc, recibida.Kind);
         Assert.InRange(recibida, antes, despues);
         Assert.Equal(recibida, Assert.Single(_ejecuciones.Registradas).FechaEvaluacion);
+        Assert.Equal(recibida, resultado.FechaEvaluacion);
     }
 
     [Fact]
@@ -145,11 +141,24 @@ public sealed class EvaluarReglasHandlerTests
         var handler = CrearHandler(repositorio);
         var fecha = new DateTimeOffset(2026, 3, 1, 10, 0, 0, TimeSpan.FromHours(-5));
 
-        await handler.HandleAsync(Comando(fecha: fecha), CancellationToken.None);
+        var resultado = await handler.HandleAsync(Comando(fecha: fecha), CancellationToken.None);
 
         var esperada = new DateTime(2026, 3, 1, 15, 0, 0, DateTimeKind.Utc);
         Assert.Equal(esperada, repositorio.FechaRecibida);
         Assert.Equal(esperada, Assert.Single(_ejecuciones.Registradas).FechaEvaluacion);
+        Assert.Equal(esperada, resultado.FechaEvaluacion);
+    }
+
+    [Fact]
+    public async Task Sin_etapa_se_conserva_en_busqueda_y_auditoria()
+    {
+        var repositorio = new RepositorioReglasFalso([Flujo("F1", Regla("RV-001"))]);
+        var handler = CrearHandler(repositorio);
+
+        await handler.HandleAsync(Comando(etapa: null), CancellationToken.None);
+
+        Assert.Null(repositorio.EtapaRecibida);
+        Assert.Null(Assert.Single(_ejecuciones.Registradas).Etapa);
     }
 
     [Fact]
@@ -188,14 +197,14 @@ public sealed class EvaluarReglasHandlerTests
         var (handler, motor) = Crear(
         [
             Flujo("GLOBAL_F", Regla("RV-001")),
-            Flujo("PENSIONADOS_F", Regla("RV-101"), Regla("RV-002"))
+            Flujo("SALUD_F", Regla("RV-101"), Regla("RV-002"))
         ]);
 
         var resultado = await handler.HandleAsync(Comando(), CancellationToken.None);
 
         var enviadas = Assert.Single(motor.Invocaciones);
         Assert.Equal(["RV-001", "RV-101", "RV-002"], enviadas.Select(r => r.CodigoRegla));
-        Assert.Equal(["GLOBAL_F", "PENSIONADOS_F"], resultado.FlujosReglas);
+        Assert.Equal(["GLOBAL_F", "SALUD_F"], resultado.FlujosReglas);
         Assert.Equal(3, resultado.Resultados.Count);
     }
 
@@ -225,7 +234,7 @@ public sealed class EvaluarReglasHandlerTests
         var registrada = Assert.Single(_ejecuciones.Registradas);
         Assert.Equal(EstadoEvaluacionGeneral.NoCumple, registrada.ResultadoGeneral);
         Assert.Equal("corr-123", registrada.IdCorrelacion);
-        Assert.Equal("PENSIONADOS", registrada.Negocio);
+        Assert.Equal("SALUD", registrada.Negocio);
     }
 
     private (EvaluarReglasHandler Handler, MotorFalso Motor) Crear(
@@ -252,11 +261,14 @@ public sealed class EvaluarReglasHandlerTests
         new(evaluar ?? (reglas => reglas.Select(r => new ResultadoEvaluacionRegla(
             r.CodigoRegla, r.Version, EstadoEvaluacionRegla.Cumple, r.Severidad, null, null)).ToList()));
 
-    private static EvaluarReglasCommand Comando(DateTimeOffset? fecha = null, string correlacion = "corr-1") =>
-        new("PENSIONADOS", "VINCULACION", "PENSIONADO", 4, fecha, JsonDocument.Parse("{}").RootElement, correlacion);
+    private static EvaluarReglasCommand Comando(
+        DateTimeOffset? fecha = null,
+        string correlacion = "corr-1",
+        int? etapa = 4) =>
+        new("SALUD", "VINCULACION", "TP-01", etapa, fecha, JsonDocument.Parse("{}").RootElement, correlacion);
 
     private static FlujoReglas Flujo(string codigo, params Regla[] reglas) =>
-        new(1, codigo, codigo, "VINCULACION", 4, 0, true, reglas);
+        new("SALUD", codigo, codigo, "VINCULACION", 4, 0, true, reglas);
 
     private static Regla Regla(string codigo, string json = "{}") =>
         new(codigo, codigo, null, TipoRegla.Parametrizable, 0, true, [Version(json)]);

@@ -6,7 +6,7 @@ public sealed record EvaluarReglasCommand(
     string Negocio,
     string Proceso,
     string? TipoPlanId,
-    int Etapa,
+    int? Etapa,
     DateTimeOffset? FechaEvaluacion,
     JsonElement Contexto,
     string IdCorrelacion,

@@ -9,7 +9,7 @@ public interface IRepositorioReglas
         string negocio,
         string proceso,
         string? tipoPlanId,
-        int etapa,
+        int? etapa,
         DateTime fechaEvaluacion,
         CancellationToken cancellationToken);
 }

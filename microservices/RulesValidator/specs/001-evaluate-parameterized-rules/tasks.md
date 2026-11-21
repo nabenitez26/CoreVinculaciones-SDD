@@ -27,11 +27,11 @@
 
 ## Azure SQL
 
-- [x] T017 Crear `RulesDbContext` y mappings de negocio, flujo_reglas, regla, version_regla, ejecucion_regla y catálogo de campos.
+- [x] T017 Crear `RulesDbContext` con `reglas.flujo_reglas`, `reglas.regla`, `reglas.version_regla`, `reglas.campo_regla`, `reglas.campo_regla_operador` y `reglas.ejecucion_regla`; referenciar los catálogos existentes Core sin duplicarlos.
 - [x] T018 Configurar PK, FK, UK, índices y CHECK de data-model.md, incluido el catálogo dinámico.
 - [x] T019 Crear las migraciones inicial y del catálogo dinámico.
 - [x] T020 Implementar `RepositorioSqlReglas`.
-- [x] T021 Consultar reglas GLOBAL por proceso y reglas específicas por negocio, proceso, etapa y `tipo_plan_id`.
+- [x] T021 Consultar flujos globales (`negocio_id IS NULL`) por proceso y flujos específicos por `ref.negocio.negocio_id`, proceso, etapa y `mae.tipo_plan.tipo_plan_id`.
 - [x] T022 Filtrar flujo/regla activos, versión ACTIVA y vigencia temporal inclusiva; usar fecha recibida desde Application.
 - [x] T023 Implementar `RepositorioSqlEjecucionesReglas` y persistir ejecución después de consolidar.
 
@@ -45,8 +45,8 @@
 
 ## API y errores
 
-- [x] T029 Crear `POST /api/v1/evaluaciones-reglas`.
-- [x] T030 Crear DTOs alineados con rules-api.yaml, usando `mesadaEnSmlmv`.
+- [x] T029 Crear `POST /api/v1/evaluar-reglas`.
+- [x] T030 Crear DTOs alineados con `rules-api.yaml` y sus campos dinámicos.
 - [x] T031 Implementar validación de request y ProblemDetails con `errors`.
 - [x] T032 Implementar 400, 404, 422 y 500 controlado.
 
@@ -71,5 +71,5 @@
 - [ ] T046 Probar mappings de ExpressionBuilder y MicrosoftRuleEngineAdapter.
 - [ ] T047 Probar contratos 400, 404, 422 y 500 sin filtración de información.
 - [ ] T048 Probar Correlation ID recibido/generado, duración y ausencia de PII.
-- [ ] T049 Probar persistencia de ejecucion_regla y resultados_json.
+- [ ] T049 Probar persistencia de `reglas.ejecucion_regla` y `resultados_json`.
 - [ ] T050 Ejecutar suite completa, Architecture Tests y convergencia contra Spec, OpenAPI y modelo.

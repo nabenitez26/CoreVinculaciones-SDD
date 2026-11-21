@@ -5,9 +5,9 @@ namespace RulesValidator.Api.Dtos;
 /// <summary>Representa la solicitud para evaluar reglas de negocio.</summary>
 public sealed record SolicitudEvaluacionReglasRequest
 {
-    public string? Negocio { get; init; }
+    public required string NegocioId { get; init; }
 
-    public string? Proceso { get; init; }
+    public required string Proceso { get; init; }
 
     public string? TipoPlanId { get; init; }
 
@@ -15,5 +15,5 @@ public sealed record SolicitudEvaluacionReglasRequest
 
     public DateTimeOffset? FechaEvaluacion { get; init; }
 
-    public JsonElement? Contexto { get; init; }
+    public required Dictionary<string, JsonElement> Contexto { get; init; }
 }
