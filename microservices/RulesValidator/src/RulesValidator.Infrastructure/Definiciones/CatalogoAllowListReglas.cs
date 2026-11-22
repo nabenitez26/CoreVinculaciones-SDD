@@ -23,9 +23,9 @@ public sealed class CatalogoAllowListReglas
             ["NO_EN"] = OperadorComparacion.NoEn
         };
 
-    public IReadOnlyList<string> Validar(JsonElement raiz, IReadOnlyDictionary<string, CampoReglaPermitido> campos)
+    public IReadOnlyList<ErrorValidacionDefinicion> Validar(JsonElement raiz, IReadOnlyDictionary<string, CampoReglaPermitido> campos)
     {
-        var errores = new List<string>();
+        var errores = new List<ErrorValidacionDefinicion>();
         var pendientes = new Stack<(JsonElement Nodo, int Profundidad)>();
         var condiciones = 0;
         var errorProfundidadAgregado = false;
@@ -41,7 +41,7 @@ public sealed class CatalogoAllowListReglas
             {
                 if (!errorProfundidadAgregado)
                 {
-                    errores.Add($"La profundidad máxima permitida es {ProfundidadMaxima}.");
+                    errores.Add(General($"La profundidad máxima permitida es {ProfundidadMaxima}."));
                     errorProfundidadAgregado = true;
                 }
 
@@ -59,7 +59,7 @@ public sealed class CatalogoAllowListReglas
                 condiciones++;
                 if (condiciones > CondicionesMaximas)
                 {
-                    errores.Add($"Una regla no puede contener más de {CondicionesMaximas} condiciones.");
+                    errores.Add(General($"Una regla no puede contener más de {CondicionesMaximas} condiciones."));
                     break;
                 }
 
@@ -80,16 +80,19 @@ public sealed class CatalogoAllowListReglas
         return errores;
     }
 
+    private static ErrorValidacionDefinicion General(string mensaje) =>
+        new(CodigosValidacionDefinicion.DefinicionReglaInvalida, null, mensaje);
+
     private static void ValidarCondicion(
         JsonElement condicion,
         IReadOnlyDictionary<string, CampoReglaPermitido> campos,
-        ICollection<string> errores)
+        ICollection<ErrorValidacionDefinicion> errores)
     {
         var campo = condicion.GetProperty("campo").GetString()!;
 
         if (!campos.TryGetValue(campo, out var configuracion))
         {
-            errores.Add($"Campo no permitido: '{campo}'.");
+            errores.Add(new(CodigosValidacionDefinicion.CampoNoPermitido, campo, $"Campo no permitido: '{campo}'."));
             return;
         }
 
@@ -97,7 +100,10 @@ public sealed class CatalogoAllowListReglas
         if (!Operadores.TryGetValue(codigoOperador, out var operador)
             || !configuracion.Operadores.Contains(operador))
         {
-            errores.Add($"Operador '{codigoOperador}' no permitido para el campo '{campo}'.");
+            errores.Add(new(
+                CodigosValidacionDefinicion.OperadorNoPermitido,
+                campo,
+                $"Operador '{codigoOperador}' no permitido para el campo '{campo}'."));
             return;
         }
 
@@ -109,7 +115,7 @@ public sealed class CatalogoAllowListReglas
         string campo,
         OperadorComparacion operador,
         TipoValorCampo tipoEsperado,
-        ICollection<string> errores)
+        ICollection<ErrorValidacionDefinicion> errores)
     {
         var esLista = operador is OperadorComparacion.En or OperadorComparacion.NoEn;
 
@@ -121,13 +127,13 @@ public sealed class CatalogoAllowListReglas
 
         if (esLista && valor.ValueKind != JsonValueKind.Array)
         {
-            errores.Add($"El operador '{operador}' requiere una lista de valores para el campo '{campo}'.");
+            errores.Add(Campo(campo, $"El operador '{operador}' requiere una lista de valores para el campo '{campo}'."));
             return;
         }
 
         if (!esLista && valor.ValueKind == JsonValueKind.Array)
         {
-            errores.Add($"El campo '{campo}' requiere un valor único para el operador '{operador}'.");
+            errores.Add(Campo(campo, $"El campo '{campo}' requiere un valor único para el operador '{operador}'."));
             return;
         }
 
@@ -135,7 +141,7 @@ public sealed class CatalogoAllowListReglas
         {
             if (valor.GetArrayLength() > ValoresMaximos)
             {
-                errores.Add($"Una condición no puede contener más de {ValoresMaximos} valores.");
+                errores.Add(Campo(campo, $"Una condición no puede contener más de {ValoresMaximos} valores."));
                 return;
             }
 
@@ -155,16 +161,16 @@ public sealed class CatalogoAllowListReglas
         string campo,
         OperadorComparacion operador,
         TipoValorCampo tipoEsperado,
-        ICollection<string> errores)
+        ICollection<ErrorValidacionDefinicion> errores)
     {
         if (operador is OperadorComparacion.En or OperadorComparacion.NoEn)
         {
-            errores.Add($"Los operadores '{operador}' requieren valores literales para el campo '{campo}'.");
+            errores.Add(Campo(campo, $"Los operadores '{operador}' requieren valores literales para el campo '{campo}'."));
         }
 
         if (tipoEsperado != TipoValorCampo.Numero)
         {
-            errores.Add($"Las referencias a parámetros solo se permiten en campos NUMERO: '{campo}'.");
+            errores.Add(Campo(campo, $"Las referencias a parámetros solo se permiten en campos NUMERO: '{campo}'."));
         }
     }
 
@@ -172,7 +178,7 @@ public sealed class CatalogoAllowListReglas
         JsonElement valor,
         string campo,
         TipoValorCampo tipoEsperado,
-        ICollection<string> errores)
+        ICollection<ErrorValidacionDefinicion> errores)
     {
         var coincide = tipoEsperado switch
         {
@@ -184,8 +190,10 @@ public sealed class CatalogoAllowListReglas
 
         if (!coincide)
         {
-            errores.Add($"El valor no tiene el tipo permitido para el campo '{campo}'.");
+            errores.Add(Campo(campo, $"El valor no tiene el tipo permitido para el campo '{campo}'."));
         }
     }
 
+    private static ErrorValidacionDefinicion Campo(string campo, string mensaje) =>
+        new(CodigosValidacionDefinicion.DefinicionReglaInvalida, campo, mensaje);
 }

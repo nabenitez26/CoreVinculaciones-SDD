@@ -23,10 +23,31 @@ if (string.IsNullOrWhiteSpace(connectionString))
 
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
+// Debe registrarse antes que el handler de evaluación, que captura cualquier excepción no tratada.
+builder.Services.AddExceptionHandler<AdministracionReglasExceptionHandler>();
 builder.Services.AddExceptionHandler<EvaluacionesReglasExceptionHandler>();
 builder.Services.AddScoped<EvaluarReglasHandler>();
 builder.Services.AddScoped<ResolverParametrosRegla>();
 builder.Services.AddScoped<EnriquecedorContextoFuentes>();
+builder.Services.AddScoped<RulesValidator.Application.Administracion.Consultas.ListarReglasHandler>();
+builder.Services.AddScoped<RulesValidator.Application.Administracion.Consultas.ObtenerReglaHandler>();
+builder.Services.AddScoped<RulesValidator.Application.Administracion.Consultas.ObtenerVersionesReglaHandler>();
+builder.Services.AddScoped<RulesValidator.Application.Administracion.Consultas.ObtenerVersionReglaHandler>();
+builder.Services.AddScoped<RulesValidator.Application.Administracion.Catalogos.ListarNegociosHandler>();
+builder.Services.AddScoped<RulesValidator.Application.Administracion.Catalogos.ListarTiposPlanHandler>();
+builder.Services.AddScoped<RulesValidator.Application.Administracion.Catalogos.ListarCamposReglaHandler>();
+builder.Services.AddScoped<RulesValidator.Application.Administracion.Catalogos.ListarParametrosHandler>();
+builder.Services.AddScoped<RulesValidator.Application.Administracion.Validacion.ValidacionDefinicionAdministrativa>();
+builder.Services.AddScoped<RulesValidator.Application.Administracion.Validacion.ValidarDefinicionReglaHandler>();
+builder.Services.AddScoped<RulesValidator.Application.Administracion.Escritura.CrearReglaHandler>();
+builder.Services.AddScoped<RulesValidator.Application.Administracion.Escritura.CrearVersionReglaHandler>();
+builder.Services.AddScoped<RulesValidator.Application.Administracion.Escritura.ActualizarBorradorReglaHandler>();
+builder.Services.AddScoped<RulesValidator.Application.Administracion.Transiciones.EnviarRevisionVersionHandler>();
+builder.Services.AddScoped<RulesValidator.Application.Administracion.Transiciones.AprobarVersionHandler>();
+builder.Services.AddScoped<RulesValidator.Application.Administracion.Transiciones.ActivarVersionHandler>();
+builder.Services.AddScoped<RulesValidator.Application.Administracion.Transiciones.InactivarVersionHandler>();
+// Reloj inyectado para fechas de auditoría (las escrituras no consultan DateTime.UtcNow directamente).
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddRulesValidatorInfrastructure(connectionString);
 // Sección de configuración de la fuente externa activa; todos sus valores se leen de configuración.
 const string seccionFuenteExterna = "FuentesExternas";
@@ -74,5 +95,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapEvaluacionesReglas();
+app.MapAdministracionReglas();
 
 app.Run();

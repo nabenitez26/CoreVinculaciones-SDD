@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using RulesValidator.Application.Abstracciones;
+using RulesValidator.Application.Administracion.Abstracciones;
 using RulesValidator.Infrastructure.Adapters;
 using RulesValidator.Infrastructure.Definiciones;
 using RulesValidator.Infrastructure.Fuentes;
@@ -27,6 +28,9 @@ public static class DependencyInjection
         services.AddScoped<IRepositorioCatalogoCampos, RepositorioSqlCatalogoCampos>();
         services.AddScoped<IRepositorioParametros, RepositorioSqlParametros>();
         services.AddScoped<IRepositorioFuentesExternas, RepositorioSqlFuentesExternas>();
+        services.AddScoped<IRepositorioConsultasReglasAdministracion, RepositorioSqlConsultasReglasAdministracion>();
+        services.AddScoped<IRepositorioCatalogosAdministracion, RepositorioSqlCatalogosAdministracion>();
+        services.AddScoped<IRepositorioEscrituraReglasAdministracion, RepositorioSqlEscrituraReglasAdministracion>();
         services.AddSingleton<ExpressionBuilder>();
         services.AddScoped<IMotorReglas, MicrosoftRuleEngineAdapter>();
         services.AddScoped<IValidadorDefinicionRegla, ValidadorDefinicionRegla>();

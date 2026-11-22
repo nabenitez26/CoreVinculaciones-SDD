@@ -1,0 +1,1357 @@
+openapi: 3.0.3
+
+info:
+  title: RulesValidator Administration API
+  version: 1.0.0
+  description: >
+    API administrativa para consultar, crear, versionar y gestionar
+    el ciclo de vida de reglas parametrizables de RulesValidator.
+
+tags:
+  - name: Reglas
+    description: Administración de reglas.
+
+  - name: Versiones
+    description: Versionamiento y ciclo de vida de reglas.
+
+  - name: Catalogos
+    description: Catálogos utilizados para configurar reglas.
+
+paths:
+
+  /api/v1/reglas:
+    get:
+      tags:
+        - Reglas
+      operationId: consultarReglas
+      summary: Consultar reglas
+
+      parameters:
+        - $ref: '#/components/parameters/NegocioIdQuery'
+        - $ref: '#/components/parameters/ProcesoQuery'
+        - $ref: '#/components/parameters/TipoPlanIdQuery'
+        - $ref: '#/components/parameters/EtapaQuery'
+        - name: estado
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/EstadoVersion'
+
+      responses:
+        '200':
+          description: Reglas encontradas.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReglaResumen'
+
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Reglas
+      operationId: crearRegla
+      summary: Crear regla
+      description: >
+        Crea una nueva regla sobre un flujo existente y genera
+        automáticamente la versión 1 en estado BORRADOR.
+
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearReglaRequest'
+            example:
+              codigo: RV-107
+              nombre: Mesada máxima especial
+              descripcion: Valida el máximo permitido para la mesada.
+              usuario: USR-011
+              alcance:
+                negocioId: CAJA
+                proceso: VINCULACION
+                tipoPlanId: TP-01
+                etapa: 4
+              severidad: BLOQUEANTE
+              codigoError: ERR-RV-107
+              mensajeError: La mesada supera el máximo permitido.
+              fechaInicioVigencia: '2026-12-01T00:00:00Z'
+              definicion:
+                tipo: CONDICION
+                campo: pension.mesada
+                operador: MENOR_IGUAL
+                valor:
+                  tipo: PARAMETRO_MULTIPLICADO
+                  parametro: SMMLV
+                  factor: 2
+
+      responses:
+        '201':
+          description: Regla creada correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReglaDetalle'
+
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+  /api/v1/reglas/validar-definicion:
+    post:
+      tags:
+        - Reglas
+      operationId: validarDefinicion
+      summary: Validar definición
+      description: >
+        Valida una RuleDefinition contra el esquema neutral, catálogo
+        de campos, operadores, tipos y parámetros. No persiste cambios.
+
+      parameters:
+        - $ref: '#/components/parameters/CorrelationId'
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidarDefinicionRequest'
+
+      responses:
+        '200':
+          description: Resultado de la validación.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidarDefinicionResponse'
+
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+  /api/v1/reglas/{reglaId}:
+    get:
+      tags:
+        - Reglas
+      operationId: consultarRegla
+      summary: Consultar regla
+
+      parameters:
+        - $ref: '#/components/parameters/ReglaId'
+
+      responses:
+        '200':
+          description: Regla encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReglaDetalle'
+
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+  /api/v1/reglas/{reglaId}/versiones:
+    get:
+      tags:
+        - Versiones
+      operationId: consultarVersiones
+      summary: Consultar historial de versiones
+
+      parameters:
+        - $ref: '#/components/parameters/ReglaId'
+
+      responses:
+        '200':
+          description: Versiones de la regla.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VersionRegla'
+
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Versiones
+      operationId: crearVersion
+      summary: Crear nueva versión
+      description: >
+        Crea la siguiente versión de la regla en estado BORRADOR.
+        Todas las versiones anteriores permanecen inmutables.
+
+      parameters:
+        - $ref: '#/components/parameters/ReglaId'
+        - $ref: '#/components/parameters/CorrelationId'
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrearVersionRequest'
+
+      responses:
+        '201':
+          description: Versión creada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionRegla'
+
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+  /api/v1/reglas/{reglaId}/versiones/{version}:
+    get:
+      tags:
+        - Versiones
+      operationId: consultarVersion
+      summary: Consultar una versión
+
+      parameters:
+        - $ref: '#/components/parameters/ReglaId'
+        - $ref: '#/components/parameters/Version'
+
+      responses:
+        '200':
+          description: Versión encontrada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionRegla'
+
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags:
+        - Versiones
+      operationId: actualizarBorrador
+      summary: Actualizar versión en borrador
+      description: >
+        Actualiza una versión exclusivamente cuando su estado actual
+        sea BORRADOR.
+
+        Las versiones EN_REVISION, APROBADA, ACTIVA e INACTIVA
+        se consideran inmutables.
+
+      parameters:
+        - $ref: '#/components/parameters/ReglaId'
+        - $ref: '#/components/parameters/Version'
+        - $ref: '#/components/parameters/CorrelationId'
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActualizarBorradorRequest'
+
+      responses:
+        '200':
+          description: Borrador actualizado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionRegla'
+
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+  /api/v1/reglas/{reglaId}/versiones/{version}/enviar-revision:
+    post:
+      tags:
+        - Versiones
+      operationId: enviarRevision
+      summary: Enviar versión a revisión
+      description: >
+        Realiza la transición BORRADOR a EN_REVISION.
+        La definición debe ser válida antes de realizar la transición.
+
+      parameters:
+        - $ref: '#/components/parameters/ReglaId'
+        - $ref: '#/components/parameters/Version'
+        - $ref: '#/components/parameters/CorrelationId'
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioOperacionRequest'
+
+      responses:
+        '200':
+          description: Versión enviada a revisión.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionRegla'
+
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+  /api/v1/reglas/{reglaId}/versiones/{version}/aprobar:
+    post:
+      tags:
+        - Versiones
+      operationId: aprobarVersion
+      summary: Aprobar versión
+      description: >
+        Realiza la transición EN_REVISION a APROBADA.
+        Registra fecha de aprobación y el usuario declarado en el body
+        (usuario_aprobacion).
+
+      parameters:
+        - $ref: '#/components/parameters/ReglaId'
+        - $ref: '#/components/parameters/Version'
+        - $ref: '#/components/parameters/CorrelationId'
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioOperacionRequest'
+
+      responses:
+        '200':
+          description: Versión aprobada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionRegla'
+
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+  /api/v1/reglas/{reglaId}/versiones/{version}/activar:
+    post:
+      tags:
+        - Versiones
+      operationId: activarVersion
+      summary: Activar versión
+      description: >
+        Realiza la transición APROBADA a ACTIVA.
+
+        Una misma regla puede mantener varias versiones ACTIVA únicamente
+        cuando sus períodos de vigencia no se superponen.
+
+        Si una nueva versión reemplaza una versión ACTIVA dentro de una
+        vigencia superpuesta, la versión anterior pasa a INACTIVA dentro
+        de la misma transacción.
+
+        Para una regla y una fecha de evaluación determinadas puede existir
+        como máximo una versión ACTIVA aplicable.
+
+      parameters:
+        - $ref: '#/components/parameters/ReglaId'
+        - $ref: '#/components/parameters/Version'
+        - $ref: '#/components/parameters/CorrelationId'
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioOperacionRequest'
+
+      responses:
+        '200':
+          description: Versión activada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionRegla'
+
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+  /api/v1/reglas/{reglaId}/versiones/{version}/inactivar:
+    post:
+      tags:
+        - Versiones
+      operationId: inactivarVersion
+      summary: Inactivar versión
+      description: >
+        Realiza la transición ACTIVA a INACTIVA.
+
+      parameters:
+        - $ref: '#/components/parameters/ReglaId'
+        - $ref: '#/components/parameters/Version'
+        - $ref: '#/components/parameters/CorrelationId'
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioOperacionRequest'
+
+      responses:
+        '200':
+          description: Versión inactivada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionRegla'
+
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+  /api/v1/catalogos/negocios:
+    get:
+      tags:
+        - Catalogos
+      operationId: consultarNegocios
+      summary: Consultar negocios
+
+      responses:
+        '200':
+          description: Negocios disponibles.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NegocioCatalogo'
+
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+  /api/v1/catalogos/tipos-plan:
+    get:
+      tags:
+        - Catalogos
+      operationId: consultarTiposPlan
+      summary: Consultar tipos de plan
+
+      parameters:
+        - name: negocioId
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 20
+          example: CAJA
+
+      responses:
+        '200':
+          description: Tipos de plan pertenecientes al negocio.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TipoPlanCatalogo'
+
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+  /api/v1/catalogos/campos:
+    get:
+      tags:
+        - Catalogos
+      operationId: consultarCampos
+      summary: Consultar campos disponibles
+      description: >
+        Retorna los campos activos disponibles para el alcance solicitado
+        junto con sus operadores permitidos.
+
+        Los parámetros representan el alcance de resolución del catálogo. Un
+        valor omitido o NULL resuelve el catálogo global aplicable para ese
+        parámetro; no equivale a una búsqueda abierta sobre todos los campos.
+        Esta diferencia respecto a GET /reglas (donde un filtro omitido no se
+        aplica) está documentada en spec.md, sección 21.
+
+      parameters:
+        - $ref: '#/components/parameters/NegocioIdQuery'
+        - $ref: '#/components/parameters/ProcesoQuery'
+        - $ref: '#/components/parameters/TipoPlanIdQuery'
+
+      responses:
+        '200':
+          description: Campos disponibles.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CampoCatalogo'
+
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+  /api/v1/catalogos/parametros:
+    get:
+      tags:
+        - Catalogos
+      operationId: consultarParametros
+      summary: Consultar parámetros Core
+
+      parameters:
+        - name: fecha
+          in: query
+          required: false
+          description: Fecha utilizada para resolver la vigencia del parámetro.
+          schema:
+            type: string
+            format: date
+          example: '2026-11-22'
+
+      responses:
+        '200':
+          description: Parámetros disponibles.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ParametroCatalogo'
+
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+
+components:
+
+  parameters:
+
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      description: >
+        Identificador de correlación. Si no se informa,
+        RulesValidator genera uno.
+      schema:
+        type: string
+        maxLength: 100
+
+    ReglaId:
+      name: reglaId
+      in: path
+      required: true
+      description: Identificador técnico único de la regla.
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+      example: 25
+
+    Version:
+      name: version
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+      example: 2
+
+    NegocioIdQuery:
+      name: negocioId
+      in: query
+      required: false
+      schema:
+        type: string
+        maxLength: 20
+      example: CAJA
+
+    ProcesoQuery:
+      name: proceso
+      in: query
+      required: false
+      schema:
+        type: string
+        maxLength: 100
+      example: VINCULACION
+
+    TipoPlanIdQuery:
+      name: tipoPlanId
+      in: query
+      required: false
+      schema:
+        type: string
+        maxLength: 10
+      example: TP-01
+
+    EtapaQuery:
+      name: etapa
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+      example: 4
+
+
+  schemas:
+
+    AlcanceRegla:
+      type: object
+      additionalProperties: false
+      required:
+        - proceso
+      properties:
+        negocioId:
+          type: string
+          maxLength: 20
+          nullable: true
+          description: NULL representa alcance global.
+          example: CAJA
+
+        proceso:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: VINCULACION
+
+        tipoPlanId:
+          type: string
+          maxLength: 10
+          nullable: true
+          example: TP-01
+
+        etapa:
+          type: integer
+          format: int32
+          minimum: 1
+          nullable: true
+          example: 4
+
+
+    # POC: usuario declarado por el consumidor para auditoría. NO es identidad autenticada.
+    # No se usa para autorización. Se reemplazará por la identidad corporativa (Bearer → ClaimsPrincipal → IUsuarioActual).
+    Usuario:
+      type: string
+      minLength: 1
+      maxLength: 100
+      description: >
+        Responsable de la operación para auditoría. Obligatorio en escrituras.
+        Se aplica trim. Información declarada, no autenticada.
+      example: USR-011
+
+    UsuarioOperacionRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - usuario
+      properties:
+        usuario:
+          $ref: '#/components/schemas/Usuario'
+
+    CrearReglaRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - codigo
+        - nombre
+        - usuario
+        - alcance
+        - severidad
+        - fechaInicioVigencia
+        - definicion
+      properties:
+        codigo:
+          type: string
+          minLength: 1
+          maxLength: 50
+          pattern: '^[A-Z][A-Z0-9-]{1,49}$'
+          example: RV-107
+
+        nombre:
+          type: string
+          minLength: 1
+          maxLength: 200
+          example: Mesada máxima especial
+
+        descripcion:
+          type: string
+          maxLength: 1000
+          nullable: true
+
+        usuario:
+          $ref: '#/components/schemas/Usuario'
+
+        alcance:
+          $ref: '#/components/schemas/AlcanceRegla'
+
+        severidad:
+          $ref: '#/components/schemas/Severidad'
+
+        codigoError:
+          type: string
+          maxLength: 100
+          nullable: true
+          example: ERR-RV-107
+
+        mensajeError:
+          type: string
+          maxLength: 1000
+          nullable: true
+
+        fechaInicioVigencia:
+          type: string
+          format: date-time
+
+        fechaFinVigencia:
+          type: string
+          format: date-time
+          nullable: true
+
+        definicion:
+          $ref: '#/components/schemas/DefinicionRegla'
+
+
+    CrearVersionRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - usuario
+        - severidad
+        - fechaInicioVigencia
+        - definicion
+      properties:
+        usuario:
+          $ref: '#/components/schemas/Usuario'
+
+        severidad:
+          $ref: '#/components/schemas/Severidad'
+
+        codigoError:
+          type: string
+          maxLength: 100
+          nullable: true
+
+        mensajeError:
+          type: string
+          maxLength: 1000
+          nullable: true
+
+        fechaInicioVigencia:
+          type: string
+          format: date-time
+
+        fechaFinVigencia:
+          type: string
+          format: date-time
+          nullable: true
+
+        definicion:
+          $ref: '#/components/schemas/DefinicionRegla'
+
+
+    ActualizarBorradorRequest:
+      allOf:
+        - $ref: '#/components/schemas/CrearVersionRequest'
+
+
+    ValidarDefinicionRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - alcance
+        - definicion
+      properties:
+        alcance:
+          $ref: '#/components/schemas/AlcanceRegla'
+
+        definicion:
+          $ref: '#/components/schemas/DefinicionRegla'
+
+
+    ValidarDefinicionResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - valida
+        - errores
+      properties:
+        valida:
+          type: boolean
+          example: true
+
+        errores:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorValidacion'
+
+
+    ErrorValidacion:
+      type: object
+      additionalProperties: false
+      required:
+        - codigo
+        - mensaje
+      properties:
+        codigo:
+          type: string
+          maxLength: 100
+          example: OPERADOR_NO_PERMITIDO
+
+        campo:
+          type: string
+          maxLength: 150
+          nullable: true
+          example: pension.mesada
+
+        mensaje:
+          type: string
+          maxLength: 1000
+
+
+    ReglaResumen:
+      type: object
+      additionalProperties: false
+      required:
+        - reglaId
+        - codigo
+        - nombre
+        - alcance
+      properties:
+        reglaId:
+          type: integer
+          format: int64
+          example: 25
+
+        codigo:
+          type: string
+          maxLength: 50
+          example: RV-002
+
+        nombre:
+          type: string
+          maxLength: 200
+          example: Mesada pensional <= 1.5 SMMLV
+
+        descripcion:
+          type: string
+          nullable: true
+          maxLength: 1000
+
+        alcance:
+          $ref: '#/components/schemas/AlcanceRegla'
+
+        versionesActivas:
+          type: array
+          description: >
+            Versiones en estado ACTIVA. Puede existir más de una únicamente
+            cuando sus períodos de vigencia no se superponen.
+          items:
+            type: integer
+            minimum: 1
+          example:
+            - 1
+            - 2
+
+
+    ReglaDetalle:
+      allOf:
+        - $ref: '#/components/schemas/ReglaResumen'
+        - type: object
+          properties:
+            versiones:
+              type: array
+              items:
+                $ref: '#/components/schemas/VersionRegla'
+
+
+    VersionRegla:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+        - versionEsquema
+        - estado
+        - severidad
+        - fechaInicioVigencia
+        - fechaCreacion
+        - definicion
+      properties:
+        version:
+          type: integer
+          minimum: 1
+          example: 1
+
+        versionEsquema:
+          type: string
+          maxLength: 20
+          example: '1.0'
+
+        estado:
+          $ref: '#/components/schemas/EstadoVersion'
+
+        severidad:
+          $ref: '#/components/schemas/Severidad'
+
+        codigoError:
+          type: string
+          nullable: true
+          maxLength: 100
+
+        mensajeError:
+          type: string
+          nullable: true
+          maxLength: 1000
+
+        fechaInicioVigencia:
+          type: string
+          format: date-time
+
+        fechaFinVigencia:
+          type: string
+          format: date-time
+          nullable: true
+
+        fechaCreacion:
+          type: string
+          format: date-time
+
+        usuarioCreacion:
+          type: string
+          maxLength: 100
+          nullable: true
+
+        fechaAprobacion:
+          type: string
+          format: date-time
+          nullable: true
+
+        usuarioAprobacion:
+          type: string
+          maxLength: 100
+          nullable: true
+
+        definicion:
+          $ref: '#/components/schemas/DefinicionRegla'
+
+
+    EstadoVersion:
+      type: string
+      enum:
+        - BORRADOR
+        - EN_REVISION
+        - APROBADA
+        - ACTIVA
+        - INACTIVA
+
+
+    Severidad:
+      type: string
+      enum:
+        - INFORMATIVA
+        - ADVERTENCIA
+        - BLOQUEANTE
+
+
+    Operador:
+      type: string
+      enum:
+        - IGUAL
+        - DIFERENTE
+        - MAYOR
+        - MAYOR_IGUAL
+        - MENOR
+        - MENOR_IGUAL
+        - EN
+        - NO_EN
+
+
+    DefinicionRegla:
+      type: object
+      description: >
+        RuleDefinition neutral. El servidor valida su estructura,
+        campos, operadores, tipos y límites antes de persistirla.
+      additionalProperties: false
+      required:
+        - tipo
+      properties:
+        versionEsquema:
+          type: string
+          maxLength: 20
+          example: '1.0'
+
+        tipo:
+          type: string
+          enum:
+            - CONDICION
+            - GRUPO
+
+        campo:
+          type: string
+          maxLength: 150
+          nullable: true
+          example: pension.mesada
+
+        operador:
+          allOf:
+            - $ref: '#/components/schemas/Operador'
+          nullable: true
+
+        valor:
+          nullable: true
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+            - type: array
+              maxItems: 50
+              items:
+                oneOf:
+                  - type: string
+                  - type: number
+                  - type: boolean
+            - $ref: '#/components/schemas/ParametroMultiplicado'
+
+        operadorLogico:
+          type: string
+          nullable: true
+          enum:
+            - Y
+            - O
+
+        condiciones:
+          type: array
+          nullable: true
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/DefinicionRegla'
+
+        aplicabilidad:
+          description: >
+            Condición o grupo previo que determina si la regla aplica. Solo se
+            admite en la raíz de la definición; el esquema canónico de Feature
+            001 rechaza aplicabilidad en nodos anidados.
+          allOf:
+            - $ref: '#/components/schemas/DefinicionRegla'
+          nullable: true
+
+
+    ParametroMultiplicado:
+      type: object
+      additionalProperties: false
+      required:
+        - tipo
+        - parametro
+        - factor
+      properties:
+        tipo:
+          type: string
+          enum:
+            - PARAMETRO_MULTIPLICADO
+
+        parametro:
+          type: string
+          pattern: '^[A-Z][A-Z0-9_]{0,39}$'
+          maxLength: 40
+          example: SMMLV
+
+        factor:
+          type: number
+          format: double
+          exclusiveMinimum: 0
+          example: 1.5
+
+
+    NegocioCatalogo:
+      type: object
+      additionalProperties: false
+      required:
+        - negocioId
+      properties:
+        negocioId:
+          type: string
+          maxLength: 20
+          example: CAJA
+
+
+    TipoPlanCatalogo:
+      type: object
+      additionalProperties: false
+      required:
+        - tipoPlanId
+        - negocioId
+      properties:
+        tipoPlanId:
+          type: string
+          maxLength: 10
+          example: TP-01
+
+        negocioId:
+          type: string
+          maxLength: 20
+          example: CAJA
+
+
+    CampoCatalogo:
+      type: object
+      additionalProperties: false
+      required:
+        - codigo
+        - tipoValor
+        - operadores
+      properties:
+        codigo:
+          type: string
+          maxLength: 150
+          example: pension.mesada
+
+        nombre:
+          type: string
+          maxLength: 400
+          nullable: true
+          example: Mesada pensional
+
+        datoRequeridoId:
+          type: string
+          maxLength: 10
+          nullable: true
+          example: DR-002
+
+        tipoValor:
+          type: string
+          enum:
+            - TEXTO
+            - NUMERO
+            - BOOLEANO
+
+        operadores:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/Operador'
+
+
+    ParametroCatalogo:
+      type: object
+      additionalProperties: false
+      required:
+        - codigo
+        - nombre
+        - valor
+      properties:
+        codigo:
+          type: string
+          maxLength: 40
+          example: SMMLV
+
+        nombre:
+          type: string
+          maxLength: 400
+          example: SMMLV
+
+        valor:
+          type: string
+          example: '1750000'
+
+        vigencia:
+          type: string
+          nullable: true
+          example: '2026'
+
+
+    ProblemDetails:
+      type: object
+      additionalProperties: true
+      required:
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          nullable: true
+          example: about:blank
+
+        title:
+          type: string
+
+        status:
+          type: integer
+          format: int32
+
+        detail:
+          type: string
+          nullable: true
+
+        instance:
+          type: string
+          nullable: true
+
+        codigo:
+          type: string
+          nullable: true
+          maxLength: 100
+
+        idCorrelacion:
+          type: string
+          nullable: true
+          maxLength: 100
+
+        traceId:
+          type: string
+          nullable: true
+
+
+  responses:
+
+    BadRequest:
+      description: >
+        Solicitud inválida (SOLICITUD_INVALIDA). En escrituras incluye usuario
+        faltante, vacío, con espacios únicamente o mayor a 100 caracteres.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+    NotFound:
+      description: Recurso o configuración no encontrada.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+    Conflict:
+      description: >
+        La operación entra en conflicto con el estado actual,
+        versionamiento, vigencia o concurrencia del recurso.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+    UnprocessableEntity:
+      description: >
+        La solicitud es sintácticamente válida pero incumple una regla
+        funcional o de configuración.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+    # RESERVADO para la integración corporativa futura. NO se emite en la POC (usuario declarado en body).
+    Unauthorized:
+      description: >
+        Se requiere un usuario autenticado (código USUARIO_NO_AUTENTICADO).
+        La operación se detiene antes de acceder al repositorio.
+        No se usa en la versión POC.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+    # RESERVADO para la autorización corporativa futura (T069). NO se emite en la POC.
+    Forbidden:
+      description: >
+        El usuario está autenticado pero no tiene permiso para la operación
+        (código OPERACION_NO_AUTORIZADA). Los roles administrativos están
+        pendientes de integración corporativa. No se usa en la versión POC.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+
+    InternalError:
+      description: Error interno controlado.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'

@@ -11,8 +11,8 @@ namespace RulesValidator.Infrastructure.Persistencia.Repositorios;
 public sealed partial class RepositorioSqlCatalogoCampos(RulesDbContext contexto) : IRepositorioCatalogoCampos
 {
     public async Task<IReadOnlyList<CampoReglaPermitido>> ObtenerCamposActivosAsync(
-        string negocio,
-        string proceso,
+        string? negocio,
+        string? proceso,
         string? tipoPlanId,
         CancellationToken cancellationToken)
     {
@@ -50,7 +50,12 @@ public sealed partial class RepositorioSqlCatalogoCampos(RulesDbContext contexto
             }
 
             var tipoValor = LeerTipo(campo.TipoValor);
-            return new CampoReglaPermitido(campo.Codigo, tipoValor, operadores);
+            return new CampoReglaPermitido(
+                campo.Codigo,
+                tipoValor,
+                operadores,
+                campo.DatoRequeridoId,
+                campo.DatoRequerido?.Nombre);
         }).ToList();
     }
 

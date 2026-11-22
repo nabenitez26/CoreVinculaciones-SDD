@@ -9,7 +9,10 @@ public enum TipoValorCampo
     Booleano
 }
 
+// Nombre y DatoRequeridoId son informativos (catálogo administrativo); la evaluación no los utiliza.
 public sealed record CampoReglaPermitido(
     string Codigo,
     TipoValorCampo TipoValor,
-    IReadOnlySet<OperadorComparacion> Operadores);
+    IReadOnlySet<OperadorComparacion> Operadores,
+    string? DatoRequeridoId = null,
+    string? Nombre = null);

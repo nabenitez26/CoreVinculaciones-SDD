@@ -57,6 +57,7 @@ public sealed class DatoRequeridoCoreEntity
 {
     public string DatoRequeridoId { get; set; } = null!;
     public string TipoDatoId { get; set; } = null!;
+    public string? Nombre { get; set; }
     public TipoDatoCoreEntity TipoDato { get; set; } = null!;
 }
 

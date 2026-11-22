@@ -29,7 +29,7 @@ public sealed class ValidadorDefinicionRegla : IValidadorDefinicionRegla
             var erroresCatalogo = new CatalogoAllowListReglas().Validar(raiz, campos);
             if (erroresCatalogo.Count > 0)
             {
-                return Task.FromResult(ResultadoValidacionDefinicion.Invalida(erroresCatalogo));
+                return Task.FromResult(ResultadoValidacionDefinicion.InvalidaConCodigos(erroresCatalogo));
             }
 
             var nodoPrincipal = ConvertirNodoRaiz(raiz);

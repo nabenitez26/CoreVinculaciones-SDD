@@ -168,6 +168,7 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
         datoRequerido.HasKey(e => e.DatoRequeridoId);
         datoRequerido.Property(e => e.DatoRequeridoId).HasColumnName("dato_requerido_id").HasColumnType("nvarchar(10)").HasMaxLength(10).IsUnicode();
         datoRequerido.Property(e => e.TipoDatoId).HasColumnName("tipo_dato_id").HasColumnType("nvarchar(20)").HasMaxLength(20).IsUnicode();
+        datoRequerido.Property(e => e.Nombre).HasColumnName("nombre").HasColumnType("nvarchar(max)").IsUnicode();
         datoRequerido.HasOne(e => e.TipoDato)
             .WithMany()
             .HasForeignKey(e => e.TipoDatoId)
