@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddScoped<IRepositorioReglas, RepositorioSqlReglas>();
         services.AddScoped<IRepositorioEjecucionesReglas, RepositorioSqlEjecucionesReglas>();
         services.AddScoped<IRepositorioCatalogoCampos, RepositorioSqlCatalogoCampos>();
+        services.AddScoped<IRepositorioParametros, RepositorioSqlParametros>();
         services.AddSingleton<ExpressionBuilder>();
         services.AddScoped<IMotorReglas, MicrosoftRuleEngineAdapter>();
         services.AddScoped<IValidadorDefinicionRegla, ValidadorDefinicionRegla>();

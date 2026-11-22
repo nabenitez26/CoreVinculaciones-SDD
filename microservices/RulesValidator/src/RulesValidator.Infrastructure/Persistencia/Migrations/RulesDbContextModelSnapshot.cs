@@ -8,7 +8,7 @@ using RulesValidator.Infrastructure.Persistencia;
 
 #nullable disable
 
-namespace RulesValidator.Infrastructure.Persistencia.Migrations
+namespace RulesValidator.Infrastructure.Migrations
 {
     [DbContext(typeof(RulesDbContext))]
     partial class RulesDbContextModelSnapshot : ModelSnapshot
@@ -21,114 +21,6 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.NegocioCoreEntity", b =>
-                {
-                    b.Property<string>("NegocioId")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasColumnName("negocio_id");
-
-                    b.HasKey("NegocioId");
-
-                    b.ToTable("negocio", "ref", t => t.ExcludeFromMigrations());
-                });
-
-            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.TipoPlanCoreEntity", b =>
-                {
-                    b.Property<string>("TipoPlanId")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)")
-                        .HasColumnName("tipo_plan_id");
-
-                    b.Property<string>("TipoContratoId")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)")
-                        .HasColumnName("tipo_contrato_id");
-
-                    b.HasKey("TipoPlanId");
-
-                    b.ToTable("tipo_plan", "mae", t => t.ExcludeFromMigrations());
-                });
-
-            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.TipoContratoCoreEntity", b =>
-                {
-                    b.Property<string>("TipoContratoId")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)")
-                        .HasColumnName("tipo_contrato_id");
-
-                    b.Property<string>("TipoVinculacionId")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)")
-                        .HasColumnName("tipo_vinculacion_id");
-
-                    b.HasKey("TipoContratoId");
-
-                    b.ToTable("tipo_contrato", "mae", t => t.ExcludeFromMigrations());
-                });
-
-            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.TipoVinculacionCoreEntity", b =>
-                {
-                    b.Property<string>("TipoVinculacionId")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)")
-                        .HasColumnName("tipo_vinculacion_id");
-
-                    b.Property<string>("NegocioId")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasColumnName("negocio_id");
-
-                    b.HasKey("TipoVinculacionId");
-
-                    b.ToTable("tipo_vinculacion", "mae", t => t.ExcludeFromMigrations());
-                });
-
-            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.DatoRequeridoCoreEntity", b =>
-                {
-                    b.Property<string>("DatoRequeridoId")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)")
-                        .HasColumnName("dato_requerido_id");
-
-                    b.Property<string>("TipoDatoId")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasColumnName("tipo_dato_id");
-
-                    b.HasKey("DatoRequeridoId");
-
-                    b.ToTable("dato_requerido", "cfg", t => t.ExcludeFromMigrations());
-                });
-
-            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.TipoDatoCoreEntity", b =>
-                {
-                    b.Property<string>("TipoDatoId")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasColumnName("tipo_dato_id");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasMaxLength(400)
-                        .HasColumnType("nvarchar(400)")
-                        .HasColumnName("nombre");
-
-                    b.HasKey("TipoDatoId");
-
-                    b.ToTable("tipo_dato", "ref", t => t.ExcludeFromMigrations());
-                });
 
             modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.CampoReglaEntity", b =>
                 {
@@ -150,6 +42,12 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                         .HasColumnType("varchar(150)")
                         .HasColumnName("codigo");
 
+                    b.Property<string>("DatoRequeridoId")
+                        .HasMaxLength(10)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("dato_requerido_id");
+
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2")
                         .HasColumnName("fecha_creacion");
@@ -158,13 +56,9 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                         .HasColumnType("datetime2")
                         .HasColumnName("fecha_modificacion");
 
-                    b.Property<string>("DatoRequeridoId")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)")
-                        .HasColumnName("dato_requerido_id");
-
                     b.Property<string>("NegocioId")
                         .HasMaxLength(20)
+                        .IsUnicode(true)
                         .HasColumnType("nvarchar(20)")
                         .HasColumnName("negocio_id");
 
@@ -176,6 +70,7 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
 
                     b.Property<string>("TipoPlanId")
                         .HasMaxLength(10)
+                        .IsUnicode(true)
                         .HasColumnType("nvarchar(10)")
                         .HasColumnName("tipo_plan_id");
 
@@ -202,12 +97,17 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                     b.HasKey("CampoReglaId")
                         .HasName("PK_campo_regla");
 
+                    b.HasIndex("DatoRequeridoId");
+
+                    b.HasIndex("TipoPlanId");
+
                     b.HasIndex("Activo", "NegocioId", "Proceso", "TipoPlanId")
                         .HasDatabaseName("IX_campo_regla_scope_activo");
 
                     b.HasIndex("NegocioId", "Proceso", "TipoPlanId", "Codigo")
                         .IsUnique()
-                        .HasDatabaseName("UX_campo_regla_scope_codigo");
+                        .HasDatabaseName("UX_campo_regla_scope_codigo")
+                        .HasFilter("[negocio_id] IS NOT NULL AND [proceso] IS NOT NULL AND [tipo_plan_id] IS NOT NULL");
 
                     b.ToTable("campo_regla", "reglas", t =>
                         {
@@ -233,6 +133,31 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                     b.ToTable("campo_regla_operador", "reglas", t =>
                         {
                             t.HasCheckConstraint("CK_campo_regla_operador_codigo", "[operador] IN ('IGUAL', 'DIFERENTE', 'MAYOR', 'MAYOR_IGUAL', 'MENOR', 'MENOR_IGUAL', 'EN', 'NO_EN')");
+                        });
+                });
+
+            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.DatoRequeridoCoreEntity", b =>
+                {
+                    b.Property<string>("DatoRequeridoId")
+                        .HasMaxLength(10)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("dato_requerido_id");
+
+                    b.Property<string>("TipoDatoId")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("tipo_dato_id");
+
+                    b.HasKey("DatoRequeridoId");
+
+                    b.HasIndex("TipoDatoId");
+
+                    b.ToTable("dato_requerido", "cfg", t =>
+                        {
+                            t.ExcludeFromMigrations();
                         });
                 });
 
@@ -285,6 +210,7 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
 
                     b.Property<string>("NegocioId")
                         .HasMaxLength(20)
+                        .IsUnicode(true)
                         .HasColumnType("nvarchar(20)")
                         .HasColumnName("negocio_id");
 
@@ -309,6 +235,7 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
 
                     b.Property<string>("TipoPlanId")
                         .HasMaxLength(10)
+                        .IsUnicode(true)
                         .HasColumnType("nvarchar(10)")
                         .HasColumnName("tipo_plan_id");
 
@@ -319,6 +246,8 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                         .HasName("UK_ejecucion_regla_id_evaluacion");
 
                     b.HasIndex("NegocioId");
+
+                    b.HasIndex("TipoPlanId");
 
                     b.ToTable("ejecucion_regla", "reglas", t =>
                         {
@@ -366,6 +295,7 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
 
                     b.Property<string>("NegocioId")
                         .HasMaxLength(20)
+                        .IsUnicode(true)
                         .HasColumnType("nvarchar(20)")
                         .HasColumnName("negocio_id");
 
@@ -389,6 +319,7 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
 
                     b.Property<string>("TipoPlanId")
                         .HasMaxLength(10)
+                        .IsUnicode(true)
                         .HasColumnType("nvarchar(10)")
                         .HasColumnName("tipo_plan_id");
 
@@ -411,6 +342,8 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                     b.HasAlternateKey("Codigo")
                         .HasName("UK_flujo_reglas_codigo");
 
+                    b.HasIndex("TipoPlanId");
+
                     b.HasIndex("NegocioId", "Proceso", "TipoPlanId", "Etapa", "Activo", "Prioridad")
                         .HasDatabaseName("IX_flujo_reglas_negocio_proceso_tipo_etapa_activo_prioridad");
 
@@ -419,8 +352,67 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                             t.HasCheckConstraint("CK_flujo_reglas_etapa", "[etapa] IS NULL OR [etapa] > 0");
 
                             t.HasCheckConstraint("CK_flujo_reglas_prioridad", "[prioridad] >= 0");
+                        });
+                });
 
-                            t.HasCheckConstraint("CK_flujo_reglas_tipo_plan_negocio", "[tipo_plan_id] IS NULL OR [negocio_id] IS NOT NULL");
+            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.NegocioCoreEntity", b =>
+                {
+                    b.Property<string>("NegocioId")
+                        .HasMaxLength(20)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("negocio_id");
+
+                    b.HasKey("NegocioId");
+
+                    b.ToTable("negocio", "ref", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.ParametroCoreEntity", b =>
+                {
+                    b.Property<string>("ParametroId")
+                        .HasMaxLength(40)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(40)")
+                        .HasColumnName("parametro_id");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(400)")
+                        .HasColumnName("nombre");
+
+                    b.Property<string>("Notas")
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("notas");
+
+                    b.Property<string>("OrigenDato")
+                        .IsRequired()
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("origen_dato");
+
+                    b.Property<string>("Valor")
+                        .IsRequired()
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("valor");
+
+                    b.Property<string>("Vigencia")
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("vigencia");
+
+                    b.HasKey("ParametroId");
+
+                    b.ToTable("parametro", "cfg", t =>
+                        {
+                            t.ExcludeFromMigrations();
                         });
                 });
 
@@ -494,6 +486,104 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                             t.HasCheckConstraint("CK_regla_prioridad", "[prioridad] >= 0");
 
                             t.HasCheckConstraint("CK_regla_tipo_regla", "[tipo_regla] IN ('PARAMETRIZABLE', 'ESPECIALIZADA')");
+                        });
+                });
+
+            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.TipoContratoCoreEntity", b =>
+                {
+                    b.Property<string>("TipoContratoId")
+                        .HasMaxLength(10)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("tipo_contrato_id");
+
+                    b.Property<string>("TipoVinculacionId")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("tipo_vinculacion_id");
+
+                    b.HasKey("TipoContratoId");
+
+                    b.HasIndex("TipoVinculacionId");
+
+                    b.ToTable("tipo_contrato", "mae", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.TipoDatoCoreEntity", b =>
+                {
+                    b.Property<string>("TipoDatoId")
+                        .HasMaxLength(20)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("tipo_dato_id");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(400)")
+                        .HasColumnName("nombre");
+
+                    b.HasKey("TipoDatoId");
+
+                    b.ToTable("tipo_dato", "ref", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.TipoPlanCoreEntity", b =>
+                {
+                    b.Property<string>("TipoPlanId")
+                        .HasMaxLength(10)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("tipo_plan_id");
+
+                    b.Property<string>("TipoContratoId")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("tipo_contrato_id");
+
+                    b.HasKey("TipoPlanId");
+
+                    b.HasIndex("TipoContratoId");
+
+                    b.ToTable("tipo_plan", "mae", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.TipoVinculacionCoreEntity", b =>
+                {
+                    b.Property<string>("TipoVinculacionId")
+                        .HasMaxLength(10)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("tipo_vinculacion_id");
+
+                    b.Property<string>("NegocioId")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(20)")
+                        .HasColumnName("negocio_id");
+
+                    b.HasKey("TipoVinculacionId");
+
+                    b.HasIndex("NegocioId");
+
+                    b.ToTable("tipo_vinculacion", "mae", t =>
+                        {
+                            t.ExcludeFromMigrations();
                         });
                 });
 
@@ -598,6 +688,33 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                         });
                 });
 
+            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.CampoReglaEntity", b =>
+                {
+                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.DatoRequeridoCoreEntity", "DatoRequerido")
+                        .WithMany()
+                        .HasForeignKey("DatoRequeridoId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_campo_regla_dato_requerido");
+
+                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.NegocioCoreEntity", "Negocio")
+                        .WithMany()
+                        .HasForeignKey("NegocioId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_campo_regla_negocio");
+
+                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.TipoPlanCoreEntity", "TipoPlan")
+                        .WithMany()
+                        .HasForeignKey("TipoPlanId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_campo_regla_tipo_plan");
+
+                    b.Navigation("DatoRequerido");
+
+                    b.Navigation("Negocio");
+
+                    b.Navigation("TipoPlan");
+                });
+
             modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.CampoReglaOperadorEntity", b =>
                 {
                     b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.CampoReglaEntity", "CampoRegla")
@@ -608,104 +725,6 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                         .HasConstraintName("FK_campo_regla_operador_campo_regla");
 
                     b.Navigation("CampoRegla");
-                });
-
-            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.EjecucionReglaEntity", b =>
-                {
-                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.NegocioCoreEntity", "Negocio")
-                        .WithMany()
-                        .HasForeignKey("NegocioId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("FK_ejecucion_negocio");
-
-                    b.Navigation("Negocio");
-
-                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.TipoPlanCoreEntity", "TipoPlan")
-                        .WithMany()
-                        .HasForeignKey("TipoPlanId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("FK_ejecucion_tipo_plan");
-
-                    b.Navigation("TipoPlan");
-                });
-
-            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.FlujoReglasEntity", b =>
-                {
-                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.NegocioCoreEntity", "Negocio")
-                        .WithMany()
-                        .HasForeignKey("NegocioId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("FK_flujo_negocio");
-
-                    b.Navigation("Negocio");
-
-                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.TipoPlanCoreEntity", "TipoPlan")
-                        .WithMany()
-                        .HasForeignKey("TipoPlanId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("FK_flujo_tipo_plan");
-
-                    b.Navigation("TipoPlan");
-                });
-
-            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.TipoPlanCoreEntity", b =>
-                {
-                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.TipoContratoCoreEntity", "TipoContrato")
-                        .WithMany()
-                        .HasForeignKey("TipoContratoId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("TipoContrato");
-                });
-
-            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.TipoContratoCoreEntity", b =>
-                {
-                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.TipoVinculacionCoreEntity", "TipoVinculacion")
-                        .WithMany()
-                        .HasForeignKey("TipoVinculacionId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("TipoVinculacion");
-                });
-
-            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.TipoVinculacionCoreEntity", b =>
-                {
-                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.NegocioCoreEntity", "Negocio")
-                        .WithMany()
-                        .HasForeignKey("NegocioId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("Negocio");
-                });
-
-            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.CampoReglaEntity", b =>
-                {
-                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.NegocioCoreEntity", "Negocio")
-                        .WithMany()
-                        .HasForeignKey("NegocioId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("FK_campo_negocio");
-
-                    b.Navigation("Negocio");
-
-                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.TipoPlanCoreEntity", "TipoPlan")
-                        .WithMany()
-                        .HasForeignKey("TipoPlanId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("FK_campo_tipo_plan");
-
-                    b.Navigation("TipoPlan");
-
-                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.DatoRequeridoCoreEntity", "DatoRequerido")
-                        .WithMany()
-                        .HasForeignKey("DatoRequeridoId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("FK_campo_dato_requerido");
-
-                    b.Navigation("DatoRequerido");
                 });
 
             modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.DatoRequeridoCoreEntity", b =>
@@ -719,6 +738,44 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                     b.Navigation("TipoDato");
                 });
 
+            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.EjecucionReglaEntity", b =>
+                {
+                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.NegocioCoreEntity", "Negocio")
+                        .WithMany()
+                        .HasForeignKey("NegocioId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_ejecucion_regla_negocio");
+
+                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.TipoPlanCoreEntity", "TipoPlan")
+                        .WithMany()
+                        .HasForeignKey("TipoPlanId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_ejecucion_regla_tipo_plan");
+
+                    b.Navigation("Negocio");
+
+                    b.Navigation("TipoPlan");
+                });
+
+            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.FlujoReglasEntity", b =>
+                {
+                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.NegocioCoreEntity", "Negocio")
+                        .WithMany()
+                        .HasForeignKey("NegocioId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_flujo_reglas_negocio");
+
+                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.TipoPlanCoreEntity", "TipoPlan")
+                        .WithMany()
+                        .HasForeignKey("TipoPlanId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_flujo_reglas_tipo_plan");
+
+                    b.Navigation("Negocio");
+
+                    b.Navigation("TipoPlan");
+                });
+
             modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.ReglaEntity", b =>
                 {
                     b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.FlujoReglasEntity", "FlujoReglas")
@@ -729,6 +786,39 @@ namespace RulesValidator.Infrastructure.Persistencia.Migrations
                         .HasConstraintName("FK_regla_flujo_reglas");
 
                     b.Navigation("FlujoReglas");
+                });
+
+            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.TipoContratoCoreEntity", b =>
+                {
+                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.TipoVinculacionCoreEntity", "TipoVinculacion")
+                        .WithMany()
+                        .HasForeignKey("TipoVinculacionId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("TipoVinculacion");
+                });
+
+            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.TipoPlanCoreEntity", b =>
+                {
+                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.TipoContratoCoreEntity", "TipoContrato")
+                        .WithMany()
+                        .HasForeignKey("TipoContratoId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("TipoContrato");
+                });
+
+            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.TipoVinculacionCoreEntity", b =>
+                {
+                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.NegocioCoreEntity", "Negocio")
+                        .WithMany()
+                        .HasForeignKey("NegocioId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Negocio");
                 });
 
             modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.VersionReglaEntity", b =>

@@ -97,6 +97,10 @@ public sealed class ValidadorDefinicionRegla : IValidadorDefinicionRegla
         JsonValueKind.Number when valor.TryGetDecimal(out var numero) => numero,
         JsonValueKind.True => true,
         JsonValueKind.False => false,
+        JsonValueKind.Object when valor.GetProperty("tipo").GetString() == "PARAMETRO_MULTIPLICADO" =>
+            new ReferenciaParametro(
+                valor.GetProperty("parametro").GetString()!,
+                valor.GetProperty("factor").GetDecimal()),
         JsonValueKind.Array => valor.EnumerateArray().Select(ConvertirValor).ToList(),
         _ => throw new FormatException("Tipo de valor desconocido.")
     };

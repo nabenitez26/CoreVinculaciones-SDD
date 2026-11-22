@@ -7,7 +7,7 @@ public sealed class DefinicionReglaTests
     [Fact]
     public void Representa_grupo_con_condiciones_anidadas()
     {
-        var condicion = new CondicionDefinicion("pension.mesadaEnSmlmv", OperadorComparacion.MayorIgual, 1m);
+        var condicion = new CondicionDefinicion("pension.mesada", OperadorComparacion.MayorIgual, 1_750_000m);
         var grupo = new GrupoDefinicion(OperadorLogico.Y, [condicion]);
 
         var definicion = new DefinicionRegla("1.0", grupo);

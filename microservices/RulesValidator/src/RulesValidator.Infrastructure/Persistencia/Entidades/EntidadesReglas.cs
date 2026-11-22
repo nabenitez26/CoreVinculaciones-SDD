@@ -66,6 +66,16 @@ public sealed class TipoDatoCoreEntity
     public string Nombre { get; set; } = null!;
 }
 
+public sealed class ParametroCoreEntity
+{
+    public string ParametroId { get; set; } = null!;
+    public string Nombre { get; set; } = null!;
+    public string Valor { get; set; } = null!;
+    public string? Vigencia { get; set; }
+    public string? Notas { get; set; }
+    public string OrigenDato { get; set; } = null!;
+}
+
 public sealed class FlujoReglasEntity
 {
     public long FlujoReglasId { get; set; }

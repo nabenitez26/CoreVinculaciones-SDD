@@ -35,6 +35,11 @@ public sealed class EvaluacionesReglasExceptionHandler(ILogger<EvaluacionesRegla
                 "Error interno",
                 "No fue posible procesar la configuración activa de reglas.",
                 "DEFINICION_REGLA_INVALIDA"),
+            ParametroConfiguracionInvalidaException parametroInvalido => (
+                StatusCodes.Status500InternalServerError,
+                "Configuración de parámetro inválida",
+                parametroInvalido.Message,
+                parametroInvalido.CodigoError),
             _ => (
                 StatusCodes.Status500InternalServerError,
                 "Error interno",

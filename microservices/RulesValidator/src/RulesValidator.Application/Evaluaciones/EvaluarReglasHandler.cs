@@ -12,6 +12,7 @@ public sealed class EvaluarReglasHandler(
     IRepositorioReglas repositorioReglas,
     IRepositorioEjecucionesReglas repositorioEjecuciones,
     IRepositorioCatalogoCampos repositorioCatalogoCampos,
+    ResolverParametrosRegla resolverParametros,
     IValidadorDefinicionRegla validador,
     IMotorReglas motor,
     ILogger<EvaluarReglasHandler>? logger = null)
@@ -57,7 +58,7 @@ public sealed class EvaluarReglasHandler(
         }
 
         // Todas las definiciones se validan antes de invocar al motor.
-        var reglasPorEvaluar = await PrepararReglasAsync(flujos, camposPermitidos, cancellationToken);
+        var reglasPorEvaluar = await PrepararReglasAsync(flujos, camposPermitidos, fechaEvaluacion, cancellationToken);
 
         var resultados = await motor.EvaluarAsync(reglasPorEvaluar, command.Contexto, camposPermitidos, cancellationToken);
         var resultadoGeneral = ConsolidadorResultadoGeneral.Consolidar(resultados);
@@ -138,6 +139,7 @@ public sealed class EvaluarReglasHandler(
     private async Task<List<ReglaPorEvaluar>> PrepararReglasAsync(
         IReadOnlyList<FlujoReglas> flujos,
         IReadOnlyList<CampoReglaPermitido> camposPermitidos,
+        DateTime fechaEvaluacion,
         CancellationToken cancellationToken)
     {
         var reglasPorEvaluar = new List<ReglaPorEvaluar>();
@@ -153,13 +155,18 @@ public sealed class EvaluarReglasHandler(
                     throw new DefinicionReglaInvalidaException(regla.Codigo, version.Version);
                 }
 
+                var definicion = await resolverParametros.ResolverAsync(
+                    validacion.Definicion!,
+                    fechaEvaluacion,
+                    cancellationToken);
+
                 reglasPorEvaluar.Add(new ReglaPorEvaluar(
                     regla.Codigo,
                     version.Version,
                     version.Severidad,
                     version.CodigoError,
                     version.MensajeError,
-                    validacion.Definicion!));
+                    definicion));
             }
         }
 

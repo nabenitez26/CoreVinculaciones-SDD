@@ -113,6 +113,12 @@ public sealed class CatalogoAllowListReglas
     {
         var esLista = operador is OperadorComparacion.En or OperadorComparacion.NoEn;
 
+        if (valor.ValueKind == JsonValueKind.Object)
+        {
+            ValidarReferenciaParametro(valor, campo, operador, tipoEsperado, errores);
+            return;
+        }
+
         if (esLista && valor.ValueKind != JsonValueKind.Array)
         {
             errores.Add($"El operador '{operador}' requiere una lista de valores para el campo '{campo}'.");
@@ -142,6 +148,24 @@ public sealed class CatalogoAllowListReglas
         }
 
         ValidarTipoValor(valor, campo, tipoEsperado, errores);
+    }
+
+    private static void ValidarReferenciaParametro(
+        JsonElement valor,
+        string campo,
+        OperadorComparacion operador,
+        TipoValorCampo tipoEsperado,
+        ICollection<string> errores)
+    {
+        if (operador is OperadorComparacion.En or OperadorComparacion.NoEn)
+        {
+            errores.Add($"Los operadores '{operador}' requieren valores literales para el campo '{campo}'.");
+        }
+
+        if (tipoEsperado != TipoValorCampo.Numero)
+        {
+            errores.Add($"Las referencias a parámetros solo se permiten en campos NUMERO: '{campo}'.");
+        }
     }
 
     private static void ValidarTipoValor(

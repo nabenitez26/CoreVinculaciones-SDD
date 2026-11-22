@@ -47,6 +47,10 @@ UK: `(negocio_id, proceso, tipo_plan_id, codigo)`. `codigo` es el alias que usa 
 
 `cfg.dato_requerido` conserva la definición funcional de los datos. `reglas.campo_regla` solo relaciona el alias de RuleDefinition con ese dato, habilita o deshabilita su uso y aporta las restricciones propias del motor. El mapping es nullable durante la migración para conservar el catálogo existente; los campos que ya tengan mapping derivan el tipo desde Core.
 
+El alias `pension.mesada` se mapea a `dato_requerido_id = 'DR-002'`.
+
+`cfg.parametro` pertenece al Core y no se crea ni modifica desde RulesValidator. EF Core la mapea como entidad excluida de migrations con `parametro_id` (`nvarchar(40)`), `valor` (`nvarchar(max)`) y `vigencia` (`nvarchar(max)`, NULL o año `yyyy`). Las referencias de RuleDefinition resuelven `parametro_id` contra `fechaEvaluacion`; `valor` debe parsear como decimal y una vigencia informada debe coincidir con el año de evaluación.
+
 ## 4. reglas.campo_regla_operador
 
 | Columna | Tipo | Nulo | Restricción |

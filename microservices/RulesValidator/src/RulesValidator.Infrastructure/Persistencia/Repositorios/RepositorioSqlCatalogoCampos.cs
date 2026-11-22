@@ -49,9 +49,7 @@ public sealed partial class RepositorioSqlCatalogoCampos(RulesDbContext contexto
                 throw new InvalidOperationException("El catálogo contiene un campo activo sin operadores permitidos.");
             }
 
-            var tipoValor = campo.DatoRequerido is null
-                ? LeerTipo(campo.TipoValor)
-                : LeerTipo(campo.DatoRequerido.TipoDato.Nombre);
+            var tipoValor = LeerTipo(campo.TipoValor);
             return new CampoReglaPermitido(campo.Codigo, tipoValor, operadores);
         }).ToList();
     }

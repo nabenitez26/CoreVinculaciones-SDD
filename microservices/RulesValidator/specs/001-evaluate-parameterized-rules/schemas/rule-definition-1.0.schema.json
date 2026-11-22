@@ -16,6 +16,9 @@
           "type": "boolean"
         },
         {
+          "$ref": "#/$defs/referenciaParametro"
+        },
+        {
           "type": "array",
           "minItems": 1,
           "maxItems": 50,
@@ -34,6 +37,28 @@
           }
         }
       ]
+    },
+    "referenciaParametro": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tipo",
+        "parametro",
+        "factor"
+      ],
+      "properties": {
+        "tipo": {
+          "const": "PARAMETRO_MULTIPLICADO"
+        },
+        "parametro": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{0,39}$"
+        },
+        "factor": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
     },
     "condicion": {
       "type": "object",

@@ -24,7 +24,7 @@ public sealed class RulesApiContractTests
               "etapa": 4,
               "contexto": {
                                 "pension.tipo": "Vejez",
-                                "pension.mesadaEnSmlmv": 1.3,
+                "pension.mesada": 2_275_000,
                                 "person.genero": "M",
                                 "person.edad": 64,
                                 "person.tipoDocumento": "CC"
@@ -40,7 +40,7 @@ public sealed class RulesApiContractTests
         Assert.Equal(4, solicitud.Etapa);
         Assert.Null(solicitud.FechaEvaluacion);
         Assert.Equal("Vejez", solicitud.Contexto["pension.tipo"].GetString());
-        Assert.Equal(1.3m, solicitud.Contexto["pension.mesadaEnSmlmv"].GetDecimal());
+        Assert.Equal(2_275_000m, solicitud.Contexto["pension.mesada"].GetDecimal());
         Assert.Equal("M", solicitud.Contexto["person.genero"].GetString());
         Assert.Equal(64, solicitud.Contexto["person.edad"].GetInt32());
         Assert.Equal("CC", solicitud.Contexto["person.tipoDocumento"].GetString());

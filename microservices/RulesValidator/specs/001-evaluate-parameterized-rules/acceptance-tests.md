@@ -12,25 +12,22 @@
 
 ## 2. RV-101
 
-| pension.mesadaEnSmlmv | Estado | Severidad | Código error | Mensaje |
+| pension.mesada (pesos) | Estado | Severidad | Código error | Mensaje |
 |---:|---|---|---|---|
-| 0.99 | NO_CUMPLE | BLOQUEANTE | ERR-MESADA-MINIMA | La mesada debe ser de al menos un SMLMV. |
-| 1.00 | CUMPLE | BLOQUEANTE | null | null |
-| 1.01 | CUMPLE | BLOQUEANTE | null | null |
+| 1749999 | NO_CUMPLE | BLOQUEANTE | ERR-MESADA-MINIMA | La mesada debe ser de al menos un SMLMV. |
+| 1750000 | CUMPLE | BLOQUEANTE | null | null |
+| 1750001 | CUMPLE | BLOQUEANTE | null | null |
 | ausente | INDETERMINADO | BLOQUEANTE | DATOS_INSUFICIENTES | No existe información suficiente para evaluar RV-101. |
 
 ## 3. RV-002
 
-| tipoPlanId | pension.mesadaEnSmlmv | Estado | Severidad | Código error | Mensaje |
-|---|---:|---|---|---|---|
-| TP-01 | 1.49 | CUMPLE | BLOQUEANTE | null | null |
-| TP-01 | 1.50 | CUMPLE | BLOQUEANTE | null | null |
-| TP-01 | 1.51 | NO_CUMPLE | BLOQUEANTE | ERR-MESADA-TP01 | La mesada supera el tope del plan TP-01. |
-| TP-02 | 1.40 | RV-002 no es seleccionado por el flujo de TP-02 |
-| TP-01 | ausente | INDETERMINADO | BLOQUEANTE | DATOS_INSUFICIENTES | No existe información suficiente para evaluar RV-002. |
-| ausente | 1.40 | INDETERMINADO | BLOQUEANTE | DATOS_INSUFICIENTES | No existe información suficiente para evaluar RV-002. |
+| tipoPlanId | pension.mesada (pesos) | RV-002 | RV-003 |
+|---|---:|---|---|
+| TP-01 | 2624999 | CUMPLE | NO_CUMPLE |
+| TP-01 | 2625000 | CUMPLE | NO_CUMPLE |
+| TP-01 | 2625001 | NO_CUMPLE | CUMPLE |
 
-RV-002 pertenece al flujo configurado para `tipoPlanId = TP-01`. El tipo de plan selecciona el flujo; no se repite en el contexto ni en `RuleDefinition`.
+Con el valor ilustrativo `SMMLV = 1750000` para 2026, los casos A/B/C son: A `mesada = 1750000` (RV-101 y RV-002 cumplen; RV-003 no cumple); B `mesada = 2625000` (RV-002 cumple; RV-003 no cumple); C `mesada = 2625001` (RV-002 no cumple; RV-003 cumple). `tipoPlanId` selecciona el flujo, no se repite en el contexto.
 
 ## 4. Consolidación
 

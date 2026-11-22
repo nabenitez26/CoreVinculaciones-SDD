@@ -11,7 +11,7 @@ public sealed class ValidadorDefinicionReglaTests
     [
         CrearCampo("pension.tipo", TipoValorCampo.Texto,
             OperadorComparacion.Igual, OperadorComparacion.Diferente, OperadorComparacion.En, OperadorComparacion.NoEn),
-        CrearCampo("pension.mesadaEnSmlmv", TipoValorCampo.Numero,
+        CrearCampo("pension.mesada", TipoValorCampo.Numero,
             OperadorComparacion.Igual, OperadorComparacion.Diferente, OperadorComparacion.Mayor,
             OperadorComparacion.MayorIgual, OperadorComparacion.Menor, OperadorComparacion.MenorIgual,
             OperadorComparacion.En, OperadorComparacion.NoEn),
@@ -22,8 +22,8 @@ public sealed class ValidadorDefinicionReglaTests
     [Theory]
     [InlineData("pension.tipo", "IGUAL", "\"Vejez\"")]
     [InlineData("pension.tipo", "EN", "[\"Vejez\",\"Invalidez\"]")]
-    [InlineData("pension.mesadaEnSmlmv", "MAYOR_IGUAL", "1")]
-    [InlineData("pension.mesadaEnSmlmv", "MENOR_IGUAL", "1.5")]
+    [InlineData("pension.mesada", "MAYOR_IGUAL", "1750000")]
+    [InlineData("pension.mesada", "MENOR_IGUAL", "2625000")]
     [InlineData("pension.tipo", "NO_EN", "[\"Vejez\",\"Invalidez\"]")]
     public void Definicion_con_campo_y_operador_configurados_es_valida(string campo, string operador, string valor)
     {
@@ -50,7 +50,7 @@ public sealed class ValidadorDefinicionReglaTests
     [InlineData("cliente.nombre", "IGUAL", "\"Ana\"")]
     [InlineData("plan.code", "IGUAL", "\"TP-01\"")]
     [InlineData("pension.tipo", "MAYOR", "1")]
-    [InlineData("pension.mesadaEnSmlmv", "MAYOR_IGUAL", "\"1\"")]
+    [InlineData("pension.mesada", "MAYOR_IGUAL", "\"1750000\"")]
     [InlineData("pension.tipo", "EN", "[\"Vejez\",1]")]
     [InlineData("pension.tipo", "MENOR_IGUAL", "\"Vejez\"")]
     public void Campo_operador_o_tipo_no_configurado_se_rechaza(string campo, string operador, string valor)
@@ -68,9 +68,9 @@ public sealed class ValidadorDefinicionReglaTests
             {
               "versionEsquema": "1.0",
               "tipo": "CONDICION",
-              "campo": "pension.mesadaEnSmlmv",
+              "campo": "pension.mesada",
               "operador": "MENOR_IGUAL",
-              "valor": 1.5,
+              "valor": 2625000,
               "aplicabilidad": {
                 "tipo": "CONDICION",
                 "campo": "pension.tipo",

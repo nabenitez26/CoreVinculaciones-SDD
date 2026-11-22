@@ -36,10 +36,10 @@ Cuando `fechaEvaluacion` no se proporciona, Application usa el reloj inyectado y
 El atributo de contexto se denomina:
 
 ```text
-pension.mesadaEnSmlmv
+pension.mesada
 ```
 
-El alias del contrato no se duplica con otro campo para expresar el tipo de plan.
+`pension.mesada` contiene el valor en pesos y se mapea a `cfg.dato_requerido.DR-002`.
 
 ## 5. Selección de reglas globales y específicas
 
@@ -68,6 +68,18 @@ No se ejecutan versiones BORRADOR, EN_REVISION, APROBADA, INACTIVA, futuras o ve
 ## 6. Modelo neutral
 
 Azure SQL almacena `definicion_json` conforme a `RuleDefinition 1.0`.
+
+Un valor numérico puede referenciar un parámetro Core con este objeto cerrado:
+
+```json
+{
+    "tipo": "PARAMETRO_MULTIPLICADO",
+    "parametro": "SMMLV",
+    "factor": 1.5
+}
+```
+
+Solo se permite para campos NUMERO y comparaciones escalares. No acepta expresiones ni nombres de operadores. El valor se resuelve en `cfg.parametro` por `parametro_id` y `fechaEvaluacion`; `vigencia = NULL` es atemporal y un año como `2026` aplica solo durante ese año. `valor` debe ser decimal invariante. Las versiones activas son inmutables: una definición nueva se publica incrementando la versión.
 
 La raíz puede incluir opcionalmente `aplicabilidad`, como condición o grupo neutral con la misma estructura de nodos. Se evalúa antes de la condición principal. Si resulta falsa, la regla retorna `NO_APLICA`; si falta un campo requerido para evaluarla, retorna `INDETERMINADO` con `DATOS_INSUFICIENTES`.
 
@@ -117,19 +129,22 @@ Código: `ERR-TIPO-PENSION`
 
 ### RV-101 - Mesada mínima
 
-Campo: `pension.mesadaEnSmlmv`  
-Condición: mayor o igual a 1  
+Campo: `pension.mesada`  
+Condición: `pension.mesada >= 1 * SMMLV`  
 Severidad: BLOQUEANTE  
 Código: `ERR-MESADA-MINIMA`
 
 ### RV-002 - Tope TP-01
 
-El flujo asociado selecciona RV-002 para `tipoPlanId = TP-01`. La regla no vuelve a comparar el plan dentro del contexto.  
-Condición: `pension.mesadaEnSmlmv <= 1.5`  
+El flujo asociado selecciona RV-002 según `tipoPlanId`; el plan no se repite en el contexto.  
+Condición: `pension.mesada <= 1.5 * SMMLV`  
 Severidad: BLOQUEANTE  
 Código: `ERR-MESADA-TP01`
 
-Un request con otro `tipoPlanId` selecciona su propio flujo; no envía el identificador de plan dentro del contexto para decidir la aplicabilidad de RV-002.
+### RV-003 - Mesada sobre el tope
+
+Campo: `pension.mesada`  
+Condición: `pension.mesada > 1.5 * SMMLV`
 
 ## 10. Definición activa inválida
 

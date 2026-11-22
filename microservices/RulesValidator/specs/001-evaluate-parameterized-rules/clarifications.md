@@ -10,7 +10,7 @@ POST /api/v1/evaluar-reglas
 
 ## C-002 Mesada
 
-El alias del contrato para la mesada es `pension.mesadaEnSmlmv`. El valor llega normalizado en SMLMV.
+El alias del contrato para la mesada es `pension.mesada`. El valor llega en pesos; su dato Core asociado es `DR-002`.
 
 ## C-003 idEvaluacion
 
@@ -62,4 +62,4 @@ Los registros de `reglas.flujo_reglas` con `negocio_id = NULL` se limitan única
 
 ## C-015 Contexto plano
 
-El contexto es un objeto JSON plano. Los aliases del ejemplo OpenAPI son `pension.tipo`, `pension.mesadaEnSmlmv`, `person.genero`, `person.edad` y `person.tipoDocumento`. `tipoPlanId` participa en la selección del flujo y no se repite como campo del contexto.
+El contexto es un objeto JSON plano. Los aliases del ejemplo OpenAPI son `pension.tipo`, `pension.mesada`, `person.genero`, `person.edad` y `person.tipoDocumento`. `tipoPlanId` participa en la selección del flujo y no se repite como campo del contexto.

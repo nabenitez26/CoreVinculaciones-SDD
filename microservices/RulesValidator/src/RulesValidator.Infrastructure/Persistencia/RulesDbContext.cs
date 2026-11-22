@@ -13,6 +13,7 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
     public DbSet<TipoVinculacionCoreEntity> TiposVinculacionCore => Set<TipoVinculacionCoreEntity>();
     public DbSet<DatoRequeridoCoreEntity> DatosRequeridosCore => Set<DatoRequeridoCoreEntity>();
     public DbSet<TipoDatoCoreEntity> TiposDatoCore => Set<TipoDatoCoreEntity>();
+    public DbSet<ParametroCoreEntity> ParametrosCore => Set<ParametroCoreEntity>();
     public DbSet<FlujoReglasEntity> FlujosReglas => Set<FlujoReglasEntity>();
     public DbSet<ReglaEntity> Reglas => Set<ReglaEntity>();
     public DbSet<VersionReglaEntity> VersionesRegla => Set<VersionReglaEntity>();
@@ -136,6 +137,16 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
         tipoDato.HasKey(e => e.TipoDatoId);
         tipoDato.Property(e => e.TipoDatoId).HasColumnName("tipo_dato_id").HasColumnType("nvarchar(20)").HasMaxLength(20).IsUnicode();
         tipoDato.Property(e => e.Nombre).HasColumnName("nombre").HasColumnType("nvarchar(400)").HasMaxLength(400).IsUnicode();
+
+        var parametro = modelBuilder.Entity<ParametroCoreEntity>();
+        parametro.ToTable("parametro", "cfg", tabla => tabla.ExcludeFromMigrations());
+        parametro.HasKey(e => e.ParametroId);
+        parametro.Property(e => e.ParametroId).HasColumnName("parametro_id").HasColumnType("nvarchar(40)").HasMaxLength(40).IsUnicode();
+        parametro.Property(e => e.Nombre).HasColumnName("nombre").HasColumnType("nvarchar(400)").HasMaxLength(400).IsUnicode();
+        parametro.Property(e => e.Valor).HasColumnName("valor").HasColumnType("nvarchar(max)").IsUnicode();
+        parametro.Property(e => e.Vigencia).HasColumnName("vigencia").HasColumnType("nvarchar(max)").IsUnicode();
+        parametro.Property(e => e.Notas).HasColumnName("notas").HasColumnType("nvarchar(max)").IsUnicode();
+        parametro.Property(e => e.OrigenDato).HasColumnName("origen_dato").HasColumnType("nvarchar(max)").IsUnicode();
     }
 
     private static void ConfigurarFlujoReglas(ModelBuilder modelBuilder)

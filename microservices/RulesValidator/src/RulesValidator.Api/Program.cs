@@ -23,6 +23,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<EvaluacionesReglasExceptionHandler>();
 builder.Services.AddScoped<EvaluarReglasHandler>();
+builder.Services.AddScoped<ResolverParametrosRegla>();
 builder.Services.AddRulesValidatorInfrastructure(connectionString);
 builder.Logging.AddOpenTelemetry(options =>
 {

@@ -48,7 +48,7 @@ internal sealed class RepositorioCatalogoCamposFalso : IRepositorioCatalogoCampo
                 OperadorComparacion.En,
                 OperadorComparacion.NoEn
             }),
-            new("pension.mesadaEnSmlmv", TipoValorCampo.Numero, new HashSet<OperadorComparacion>
+            new("pension.mesada", TipoValorCampo.Numero, new HashSet<OperadorComparacion>
             {
                 OperadorComparacion.Igual,
                 OperadorComparacion.Diferente,
@@ -60,6 +60,20 @@ internal sealed class RepositorioCatalogoCamposFalso : IRepositorioCatalogoCampo
                 OperadorComparacion.NoEn
             }),
         ]);
+}
+
+internal sealed class RepositorioParametrosFalso(decimal valor) : IRepositorioParametros
+{
+    public List<(string ParametroId, DateTime FechaEvaluacion)> Consultas { get; } = [];
+
+    public Task<decimal> ObtenerValorNumericoAsync(
+        string parametroId,
+        DateTime fechaEvaluacion,
+        CancellationToken cancellationToken)
+    {
+        Consultas.Add((parametroId, fechaEvaluacion));
+        return Task.FromResult(valor);
+    }
 }
 
 internal sealed class ValidadorFalso(Func<string, ResultadoValidacionDefinicion> validar) : IValidadorDefinicionRegla
@@ -180,7 +194,13 @@ public sealed class EvaluarReglasHandlerTests
         var motor = CrearMotor();
         var validador = new ValidadorFalso(json =>
             json == "invalida" ? ResultadoValidacionDefinicion.Invalida(["error"]) : ResultadoValidacionDefinicion.Valida(DefinicionValida));
-        var handler = new EvaluarReglasHandler(repositorio, _ejecuciones, new RepositorioCatalogoCamposFalso(), validador, motor);
+        var handler = new EvaluarReglasHandler(
+            repositorio,
+            _ejecuciones,
+            new RepositorioCatalogoCamposFalso(),
+            new ResolverParametrosRegla(new RepositorioParametrosFalso(1_750_000m)),
+            validador,
+            motor);
 
         var ex = await Assert.ThrowsAsync<DefinicionReglaInvalidaException>(
             () => handler.HandleAsync(Comando(), CancellationToken.None));
@@ -246,6 +266,7 @@ public sealed class EvaluarReglasHandlerTests
             new RepositorioReglasFalso(flujos),
             _ejecuciones,
             new RepositorioCatalogoCamposFalso(),
+            new ResolverParametrosRegla(new RepositorioParametrosFalso(1_750_000m)),
             new ValidadorFalso(_ => ResultadoValidacionDefinicion.Valida(DefinicionValida)),
             motor);
 
@@ -254,6 +275,7 @@ public sealed class EvaluarReglasHandlerTests
 
     private EvaluarReglasHandler CrearHandler(RepositorioReglasFalso repositorio) =>
         new(repositorio, _ejecuciones, new RepositorioCatalogoCamposFalso(),
+            new ResolverParametrosRegla(new RepositorioParametrosFalso(1_750_000m)),
             new ValidadorFalso(_ => ResultadoValidacionDefinicion.Valida(DefinicionValida)),
             CrearMotor());
 
