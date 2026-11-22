@@ -355,6 +355,109 @@ namespace RulesValidator.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.FuenteDatoCoreEntity", b =>
+                {
+                    b.Property<string>("FuenteDatoId")
+                        .HasMaxLength(10)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("fuente_dato_id");
+
+                    b.HasKey("FuenteDatoId");
+
+                    b.ToTable("fuente_dato", "ref", t =>
+                        {
+                            t.ExcludeFromMigrations();
+                        });
+                });
+
+            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.FuenteExternaMapeoEntity", b =>
+                {
+                    b.Property<string>("FuenteDatoId")
+                        .HasMaxLength(10)
+                        .IsUnicode(true)
+                        .HasColumnType("nvarchar(10)")
+                        .HasColumnName("fuente_dato_id");
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit")
+                        .HasColumnName("activo");
+
+                    b.Property<string>("CampoClaveContexto")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(150)")
+                        .HasColumnName("campo_clave_contexto");
+
+                    b.Property<long>("CampoReglaId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("campo_regla_id");
+
+                    b.Property<string>("ColumnaClave")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("columna_clave");
+
+                    b.Property<string>("ColumnaValor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("columna_valor");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("fecha_creacion");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("fecha_modificacion");
+
+                    b.Property<string>("NombreBlob")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("nombre_blob");
+
+                    b.Property<string>("Separador")
+                        .IsRequired()
+                        .HasMaxLength(1)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(1)")
+                        .HasColumnName("separador");
+
+                    b.Property<string>("UsuarioCreacion")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("usuario_creacion");
+
+                    b.Property<string>("UsuarioModificacion")
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("usuario_modificacion");
+
+                    b.HasKey("FuenteDatoId")
+                        .HasName("PK_fuente_externa_mapeo");
+
+                    b.HasIndex("CampoReglaId");
+
+                    b.ToTable("fuente_externa_mapeo", "reglas", t =>
+                        {
+                            t.HasCheckConstraint("CK_fuente_externa_mapeo_columnas", "[columna_clave] <> [columna_valor]");
+
+                            t.HasCheckConstraint("CK_fuente_externa_mapeo_nombre_blob", "LOWER(RIGHT([nombre_blob], 4)) = '.csv'");
+
+                            t.HasCheckConstraint("CK_fuente_externa_mapeo_separador", "LEN([separador]) = 1");
+                        });
+                });
+
             modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.NegocioCoreEntity", b =>
                 {
                     b.Property<string>("NegocioId")
@@ -774,6 +877,27 @@ namespace RulesValidator.Infrastructure.Migrations
                     b.Navigation("Negocio");
 
                     b.Navigation("TipoPlan");
+                });
+
+            modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.FuenteExternaMapeoEntity", b =>
+                {
+                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.CampoReglaEntity", "CampoRegla")
+                        .WithMany()
+                        .HasForeignKey("CampoReglaId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_fuente_externa_mapeo_campo_regla");
+
+                    b.HasOne("RulesValidator.Infrastructure.Persistencia.Entidades.FuenteDatoCoreEntity", "FuenteDato")
+                        .WithMany()
+                        .HasForeignKey("FuenteDatoId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired()
+                        .HasConstraintName("FK_fuente_externa_mapeo_fuente_dato");
+
+                    b.Navigation("CampoRegla");
+
+                    b.Navigation("FuenteDato");
                 });
 
             modelBuilder.Entity("RulesValidator.Infrastructure.Persistencia.Entidades.ReglaEntity", b =>

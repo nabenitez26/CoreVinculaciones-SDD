@@ -1,6 +1,7 @@
 using System.Text.Json;
 using RulesValidator.Application.Abstracciones;
 using RulesValidator.Application.Evaluaciones;
+using RulesValidator.Application.Fuentes;
 using RulesValidator.Domain.Evaluaciones;
 using RulesValidator.Domain.Reglas;
 using RulesValidator.Domain.Reglas.Definiciones;
@@ -97,6 +98,25 @@ internal sealed class MotorFalso(Func<IReadOnlyList<ReglaPorEvaluar>, IReadOnlyL
         Invocaciones.Add(reglas);
         return Task.FromResult(evaluar(reglas));
     }
+}
+
+internal sealed class RepositorioFuentesFalso : IRepositorioFuentesExternas
+{
+    public Task<ConfiguracionFuenteExterna?> ObtenerActivaAsync(string fuenteId, CancellationToken cancellationToken) =>
+        Task.FromResult<ConfiguracionFuenteExterna?>(new ConfiguracionFuenteExterna(
+            fuenteId, "fuente_externa_simulada.csv", ";", "NUMERO_DOCUMENTO", "RESPUESTA",
+            "persona.numeroDocumento", "fuente.pension.respuesta"));
+}
+
+internal sealed class FuenteExternaFalsa : IFuenteExterna
+{
+    public string FuenteId => "FD-PENS";
+
+    public Task<ResultadoConsultaFuente> ConsultarRespuestaAsync(
+        ConfiguracionFuenteExterna configuracion,
+        string valorClave,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(ResultadoConsultaFuente.SinRespuesta(FuenteId));
 }
 
 public sealed class EvaluarReglasHandlerTests
@@ -199,6 +219,7 @@ public sealed class EvaluarReglasHandlerTests
             _ejecuciones,
             new RepositorioCatalogoCamposFalso(),
             new ResolverParametrosRegla(new RepositorioParametrosFalso(1_750_000m)),
+            CrearEnriquecedor(),
             validador,
             motor);
 
@@ -267,6 +288,7 @@ public sealed class EvaluarReglasHandlerTests
             _ejecuciones,
             new RepositorioCatalogoCamposFalso(),
             new ResolverParametrosRegla(new RepositorioParametrosFalso(1_750_000m)),
+            CrearEnriquecedor(),
             new ValidadorFalso(_ => ResultadoValidacionDefinicion.Valida(DefinicionValida)),
             motor);
 
@@ -276,8 +298,12 @@ public sealed class EvaluarReglasHandlerTests
     private EvaluarReglasHandler CrearHandler(RepositorioReglasFalso repositorio) =>
         new(repositorio, _ejecuciones, new RepositorioCatalogoCamposFalso(),
             new ResolverParametrosRegla(new RepositorioParametrosFalso(1_750_000m)),
+            CrearEnriquecedor(),
             new ValidadorFalso(_ => ResultadoValidacionDefinicion.Valida(DefinicionValida)),
             CrearMotor());
+
+    private static EnriquecedorContextoFuentes CrearEnriquecedor() =>
+        new(new FuenteExternaFalsa(), new RepositorioFuentesFalso());
 
     private static MotorFalso CrearMotor(Func<IReadOnlyList<ReglaPorEvaluar>, IReadOnlyList<ResultadoEvaluacionRegla>>? evaluar = null) =>
         new(evaluar ?? (reglas => reglas.Select(r => new ResultadoEvaluacionRegla(

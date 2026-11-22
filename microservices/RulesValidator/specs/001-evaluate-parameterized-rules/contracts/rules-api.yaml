@@ -3,135 +3,299 @@ openapi: 3.0.3
 info:
   title: RulesValidator API
   version: 1.0.0
-  description: API para evaluación de reglas parametrizables.
+  description: >
+    API para evaluar reglas parametrizables activas y vigentes según el
+    negocio, proceso, tipo de plan, etapa y contexto informado.
+
+servers:
+  - url: /
+    description: Servidor actual
+
+tags:
+  - name: EvaluarReglas
+    description: Operaciones para evaluación de reglas.
 
 paths:
-
   /api/v1/evaluar-reglas:
     post:
-      summary: Evaluar reglas
-      description: >
-        Evalúa las reglas activas y vigentes aplicables al contexto solicitado.
-        RulesValidator determina los flujos aplicables a partir del negocio,
-        proceso, tipo de plan y etapa.
-
-        El contexto contiene únicamente los datos dinámicos necesarios para
-        evaluar las RuleDefinition seleccionadas.
-
-        El consumidor no envía expresiones ejecutables ni expresiones de
-        Microsoft RulesEngine.
-
-      operationId: evaluarReglas
-
       tags:
         - EvaluarReglas
+      operationId: evaluarReglas
+      summary: Evaluar reglas
+      description: >
+        Evalúa las reglas activas y vigentes aplicables al negocio, proceso,
+        tipo de plan y etapa solicitados.
+
+        El contexto contiene los datos dinámicos requeridos por las reglas
+        seleccionadas. Sus propiedades se interpretan como aliases literales,
+        incluso cuando contienen puntos.
+
+        El consumidor no envía expresiones ejecutables, definiciones de reglas
+        ni expresiones de Microsoft RulesEngine.
+
+        Durante la Etapa 5, RulesValidator puede enriquecer internamente el
+        contexto mediante fuentes externas. El consumidor no debe enviar los
+        campos generados por dichas fuentes.
 
       parameters:
-
         - name: X-Correlation-ID
           in: header
           required: false
           description: >
             Identificador de correlación proporcionado por el consumidor.
-            Si no se proporciona, RulesValidator genera uno.
+            Cuando no se informa, RulesValidator genera uno.
           schema:
             type: string
+            minLength: 1
             maxLength: 100
+          example: VIN-20261121-000123
 
       requestBody:
         required: true
+        description: Contexto de selección y datos disponibles para la evaluación.
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/EvaluarReglasRequest'
-
             examples:
-
-              pensionadoTp01:
-                summary: Evaluación de vinculación TP-01
+              casoA:
+                summary: Caso A, TP-01 cumple Etapa 4
                 value:
-                  negocioId: SALUD
+                  negocioId: CAJA
                   proceso: VINCULACION
                   tipoPlanId: TP-01
                   etapa: 4
                   fechaEvaluacion: '2026-11-21T15:30:00Z'
                   contexto:
                     pension.tipo: Vejez
-                    pension.mesada: 2275000
-                    person.genero: M
-                    person.edad: 64
-                    person.tipoDocumento: CC
+                    pension.mesada: 2100000
+                    persona.sexo: Femenino
+                    persona.edad: 66
+                    persona.tipoDocumento: CC
+
+              casoB:
+                summary: Caso B, TP-01 incumple edad mínima
+                value:
+                  negocioId: CAJA
+                  proceso: VINCULACION
+                  tipoPlanId: TP-01
+                  etapa: 4
+                  fechaEvaluacion: '2026-11-21T15:30:00Z'
+                  contexto:
+                    pension.tipo: Vejez
+                    pension.mesada: 1900000
+                    persona.sexo: Femenino
+                    persona.edad: 55
+                    persona.tipoDocumento: CC
+
+              casoCEtapa4:
+                summary: Caso C, TP-02 cumple Etapa 4
+                value:
+                  negocioId: CAJA
+                  proceso: VINCULACION
+                  tipoPlanId: TP-02
+                  etapa: 4
+                  fechaEvaluacion: '2026-11-21T15:30:00Z'
+                  contexto:
+                    pension.tipo: Vejez
+                    pension.mesada: 4200000
+                    persona.sexo: Masculino
+                    persona.edad: 68
+                    persona.tipoDocumento: CC
+
+              casoCEtapa5:
+                summary: Caso C, consulta de fuente externa en Etapa 5
+                value:
+                  negocioId: CAJA
+                  proceso: VINCULACION
+                  tipoPlanId: TP-02
+                  etapa: 5
+                  fechaEvaluacion: '2026-11-21T15:30:00Z'
+                  contexto:
+                    persona.numeroDocumento: '52310057'
 
       responses:
-
         '200':
-          description: Evaluación ejecutada correctamente.
+          description: Evaluación procesada correctamente.
+          headers:
+            X-Correlation-ID:
+              description: Identificador de correlación de la evaluación.
+              schema:
+                type: string
+                maxLength: 100
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/EvaluarReglasResponse'
+              examples:
+                cumple:
+                  summary: Todas las reglas bloqueantes cumplen
+                  value:
+                    idEvaluacion: ab7e6602-3754-426e-9a73-38d0751de762
+                    idCorrelacion: cc67a99d-a3f5-4351-b8c7-b28fe8c32957
+                    resultadoGeneral: CUMPLE
+                    fechaEvaluacion: '2026-11-21T21:01:34.1605936Z'
+                    resultados:
+                      - codigoRegla: RV-001
+                        version: 1
+                        resultado: CUMPLE
+                        severidad: BLOQUEANTE
+                        codigoError: null
+                        mensaje: null
+                      - codigoRegla: RV-002
+                        version: 1
+                        resultado: CUMPLE
+                        severidad: BLOQUEANTE
+                        codigoError: null
+                        mensaje: null
+                      - codigoRegla: RV-101
+                        version: 1
+                        resultado: CUMPLE
+                        severidad: BLOQUEANTE
+                        codigoError: null
+                        mensaje: null
+                      - codigoRegla: RV-102
+                        version: 1
+                        resultado: CUMPLE
+                        severidad: BLOQUEANTE
+                        codigoError: null
+                        mensaje: null
+                      - codigoRegla: RV-103
+                        version: 1
+                        resultado: CUMPLE
+                        severidad: BLOQUEANTE
+                        codigoError: null
+                        mensaje: null
+
+                noCumple:
+                  summary: Una regla bloqueante no cumple
+                  value:
+                    idEvaluacion: 8875fbc3-1a7a-41ce-99e5-b5d898c63000
+                    idCorrelacion: 952c375d-66e7-4fbb-97cf-58d33efbe26b
+                    resultadoGeneral: NO_CUMPLE
+                    fechaEvaluacion: '2026-11-21T20:49:22.1524122Z'
+                    resultados:
+                      - codigoRegla: RV-102
+                        version: 1
+                        resultado: NO_CUMPLE
+                        severidad: BLOQUEANTE
+                        codigoError: ERR-RV-102
+                        mensaje: >
+                          No se cumple la edad mínima requerida para la pensión
+                          de vejez.
+
+                fuenteNoDisponible:
+                  summary: Fuente externa sin respuesta
+                  value:
+                    idEvaluacion: 87ae0c85-a0b3-41c3-b038-f8ae29d46501
+                    idCorrelacion: VIN-20261121-000124
+                    resultadoGeneral: INDETERMINADO
+                    fechaEvaluacion: '2026-11-21T15:30:00Z'
+                    resultados:
+                      - codigoRegla: RV-104
+                        version: 1
+                        resultado: INDETERMINADO
+                        severidad: ADVERTENCIA
+                        codigoError: FUENTE_NO_DISPONIBLE
+                        mensaje: >
+                          No fue posible obtener una respuesta concluyente de
+                          la fuente externa de pensionados.
 
         '400':
-          description: Solicitud inválida.
+          description: >
+            La solicitud no cumple el contrato, contiene valores inválidos o
+            no incluye propiedades obligatorias.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: about:blank
+                title: Solicitud inválida
+                status: 400
+                detail: El campo negocioId es obligatorio.
+                instance: /api/v1/evaluar-reglas
+                codigo: SOLICITUD_INVALIDA
+                idCorrelacion: VIN-20261121-000123
+                traceId: 00-00000000000000000000000000000000-0000000000000000-01
 
         '404':
           description: >
-            No existe el negocio, tipo de plan o configuración necesaria
-            para resolver la evaluación solicitada.
+            No existe el negocio, tipo de plan o configuración requerida para
+            resolver la evaluación.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: about:blank
+                title: Configuración no encontrada
+                status: 404
+                detail: No se encontraron flujos activos para el contexto solicitado.
+                instance: /api/v1/evaluar-reglas
+                codigo: CONFIGURACION_NO_ENCONTRADA
+                idCorrelacion: VIN-20261121-000123
+                traceId: 00-00000000000000000000000000000000-0000000000000000-01
 
         '422':
           description: >
-            El contexto recibido no permite realizar una evaluación válida.
+            La combinación de negocio, proceso, tipo de plan o etapa es
+            semánticamente inválida.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
+              example:
+                type: about:blank
+                title: Contexto de evaluación inválido
+                status: 422
+                detail: El tipo de plan informado no pertenece al negocio solicitado.
+                instance: /api/v1/evaluar-reglas
+                codigo: CONTEXTO_EVALUACION_INVALIDO
+                idCorrelacion: VIN-20261121-000123
+                traceId: 00-00000000000000000000000000000000-0000000000000000-01
 
         '500':
-          description: Error interno durante la evaluación.
+          description: >
+            Ocurrió un error interno o existe una configuración activa de
+            reglas que no puede ser procesada de forma segura.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
-
+              example:
+                type: about:blank
+                title: Error interno
+                status: 500
+                detail: No fue posible procesar la configuración activa de reglas.
+                instance: /api/v1/evaluar-reglas
+                codigo: DEFINICION_REGLA_INVALIDA
+                idCorrelacion: VIN-20261121-000123
+                traceId: 00-00000000000000000000000000000000-0000000000000000-01
 
 components:
-
   schemas:
-
     EvaluarReglasRequest:
       type: object
       additionalProperties: false
-
       required:
         - negocioId
         - proceso
         - contexto
-
       properties:
-
         negocioId:
           type: string
+          minLength: 1
           maxLength: 20
           description: >
             Identificador del negocio definido por el Core de Vinculaciones.
-            Ejemplos: SALUD, CAJA.
-          example: SALUD
+          example: CAJA
 
         proceso:
           type: string
           minLength: 1
           maxLength: 100
-          description: >
-            Código del proceso para el cual se solicita la evaluación.
+          description: Código del proceso evaluado.
           example: VINCULACION
 
         tipoPlanId:
@@ -139,18 +303,18 @@ components:
           maxLength: 10
           nullable: true
           description: >
-            Identificador del tipo de plan definido en el Core de
-            Vinculaciones. Es requerido funcionalmente cuando el proceso
-            necesita discriminar las reglas por tipo de plan.
+            Identificador del tipo de plan definido por el Core. Debe
+            informarse cuando la selección de reglas depende del plan.
           example: TP-01
 
         etapa:
           type: integer
+          format: int32
           minimum: 1
           nullable: true
           description: >
-            Etapa del proceso que se desea evaluar. Solo se informa cuando
-            el proceso utiliza etapas.
+            Etapa del proceso evaluada. Se informa únicamente cuando el
+            proceso está dividido en etapas.
           example: 4
 
         fechaEvaluacion:
@@ -158,103 +322,102 @@ components:
           format: date-time
           nullable: true
           description: >
-            Fecha UTC utilizada para determinar la vigencia de las reglas.
-            Si no se informa, RulesValidator utiliza la fecha UTC actual
-            proporcionada por su reloj de aplicación.
+            Fecha UTC utilizada para seleccionar versiones vigentes y resolver
+            parámetros del Core. Si no se informa, RulesValidator utiliza la
+            fecha UTC actual proporcionada por el reloj de la aplicación.
           example: '2026-11-21T15:30:00Z'
 
         contexto:
           type: object
-          description: >
-            Diccionario dinámico con los valores disponibles para evaluar las
-            reglas seleccionadas. Los nombres deben corresponder con campos
-            autorizados por RulesValidator.
-
-            Los campos necesarios son determinados por las reglas activas y
-            vigentes aplicables a la evaluación.
-
-            No debe repetir tipoPlanId como un campo del contexto.
+          minProperties: 1
           additionalProperties: true
+          description: >
+            Diccionario plano de valores disponibles para la evaluación. Las
+            propiedades se interpretan como aliases literales, incluso cuando
+            contienen puntos.
+
+            Para Etapa 4 pueden utilizarse pension.tipo, pension.mesada,
+            persona.sexo, persona.edad y persona.tipoDocumento.
+
+            Para Etapa 5, RV-104 requiere persona.numeroDocumento.
+
+            El consumidor no debe enviar tipoPlanId dentro del contexto ni
+            campos internos generados por RulesValidator, como
+            fuente.pension.respuesta.
           example:
             pension.tipo: Vejez
-            pension.mesada: 2275000
-            person.genero: M
-            person.edad: 64
-            person.tipoDocumento: CC
-
+            pension.mesada: 2100000
+            persona.sexo: Femenino
+            persona.edad: 66
+            persona.tipoDocumento: CC
 
     EvaluarReglasResponse:
       type: object
       additionalProperties: false
-
       required:
         - idEvaluacion
         - idCorrelacion
         - resultadoGeneral
         - fechaEvaluacion
         - resultados
-
       properties:
-
         idEvaluacion:
           type: string
           format: uuid
-          description: >
-            Identificador generado por RulesValidator para la evaluación.
+          description: Identificador generado por RulesValidator.
 
         idCorrelacion:
           type: string
+          minLength: 1
           maxLength: 100
           description: >
-            Identificador de correlación recibido o generado por
-            RulesValidator.
+            Identificador de correlación recibido mediante
+            X-Correlation-ID o generado por RulesValidator.
 
         resultadoGeneral:
-          type: string
-          enum:
-            - CUMPLE
-            - NO_CUMPLE
-            - INDETERMINADO
-          description: Resultado consolidado de la evaluación.
+          $ref: '#/components/schemas/ResultadoEvaluacion'
 
         fechaEvaluacion:
           type: string
           format: date-time
+          description: Fecha efectiva utilizada durante la evaluación.
 
         resultados:
           type: array
           items:
             $ref: '#/components/schemas/ResultadoRegla'
 
+    ResultadoEvaluacion:
+      type: string
+      description: Resultado consolidado o individual de una evaluación.
+      enum:
+        - CUMPLE
+        - NO_CUMPLE
+        - INDETERMINADO
 
     ResultadoRegla:
       type: object
       additionalProperties: false
-
       required:
         - codigoRegla
         - version
         - resultado
         - severidad
-
       properties:
-
         codigoRegla:
           type: string
+          minLength: 1
           maxLength: 50
           example: RV-002
 
         version:
           type: integer
+          format: int32
           minimum: 1
           example: 1
 
         resultado:
-          type: string
-          enum:
-            - CUMPLE
-            - NO_CUMPLE
-            - INDETERMINADO
+          $ref: '#/components/schemas/ResultadoEvaluacion'
 
         severidad:
           type: string
@@ -262,43 +425,61 @@ components:
             - INFORMATIVA
             - ADVERTENCIA
             - BLOQUEANTE
+          example: BLOQUEANTE
 
         codigoError:
           type: string
           nullable: true
           maxLength: 100
-          example: ERR-RV-002
+          example: ERR-MESADA-TP01
 
         mensaje:
           type: string
           nullable: true
           maxLength: 1000
           example: >
-            La mesada pensional supera el límite permitido.
-
+            Para TP-01 la mesada pensional no puede superar 1.5 SMMLV.
 
     ProblemDetails:
       type: object
-
+      additionalProperties: true
+      required:
+        - title
+        - status
       properties:
-
         type:
           type: string
+          nullable: true
+          example: about:blank
 
         title:
           type: string
+          example: Solicitud inválida
 
         status:
           type: integer
+          format: int32
+          example: 400
 
         detail:
           type: string
+          nullable: true
 
         instance:
           type: string
+          nullable: true
+          example: /api/v1/evaluar-reglas
 
         codigo:
           type: string
+          nullable: true
+          maxLength: 100
 
         idCorrelacion:
           type: string
+          nullable: true
+          maxLength: 100
+
+        traceId:
+          type: string
+          nullable: true

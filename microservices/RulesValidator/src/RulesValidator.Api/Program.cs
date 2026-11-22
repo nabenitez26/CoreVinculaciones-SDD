@@ -7,8 +7,10 @@ using OpenTelemetry.Trace;
 using RulesValidator.Api.Endpoints;
 using RulesValidator.Api.Middleware;
 using RulesValidator.Application.Evaluaciones;
+using RulesValidator.Application.Fuentes;
 using RulesValidator.Application.Observabilidad;
 using RulesValidator.Infrastructure;
+using RulesValidator.Infrastructure.Fuentes;
 using Scalar.AspNetCore;
 using System.Text.Json.Serialization;
 
@@ -24,7 +26,14 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<EvaluacionesReglasExceptionHandler>();
 builder.Services.AddScoped<EvaluarReglasHandler>();
 builder.Services.AddScoped<ResolverParametrosRegla>();
+builder.Services.AddScoped<EnriquecedorContextoFuentes>();
 builder.Services.AddRulesValidatorInfrastructure(connectionString);
+// Sección de configuración de la fuente externa activa; todos sus valores se leen de configuración.
+const string seccionFuenteExterna = "FuentesExternas";
+builder.Services.AddOptions<OpcionesFuenteExterna>()
+	.Bind(builder.Configuration.GetSection(seccionFuenteExterna))
+	.ValidateOnStart();
+builder.Services.AddFuenteExternaBlob();
 builder.Logging.AddOpenTelemetry(options =>
 {
 	options.IncludeScopes = true;
@@ -49,6 +58,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 	options.SerializerOptions.AllowDuplicateProperties = false;
 });
 
+
 var app = builder.Build();
 
 app.UseMiddleware<CorrelationIdMiddleware>();
@@ -57,7 +67,7 @@ app.UseExceptionHandler();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    app.MapScalarApiReference(options => options.WithTitle("Customer Api")
+    app.MapScalarApiReference(options => options.WithTitle("Rules Validator Api")
      .WithTheme(ScalarTheme.Kepler)
      .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient)
     );

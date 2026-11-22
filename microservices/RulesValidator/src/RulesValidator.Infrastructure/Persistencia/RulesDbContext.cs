@@ -18,6 +18,7 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
     public DbSet<ReglaEntity> Reglas => Set<ReglaEntity>();
     public DbSet<VersionReglaEntity> VersionesRegla => Set<VersionReglaEntity>();
     public DbSet<EjecucionReglaEntity> EjecucionesRegla => Set<EjecucionReglaEntity>();
+    public DbSet<FuenteExternaMapeoEntity> FuentesExternasMapeo => Set<FuenteExternaMapeoEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -28,6 +29,46 @@ public sealed class RulesDbContext(DbContextOptions<RulesDbContext> options) : D
         ConfigurarRegla(modelBuilder);
         ConfigurarVersionRegla(modelBuilder);
         ConfigurarEjecucionRegla(modelBuilder);
+        ConfigurarFuenteExternaMapeo(modelBuilder);
+    }
+
+    private static void ConfigurarFuenteExternaMapeo(ModelBuilder modelBuilder)
+    {
+        var fuenteDato = modelBuilder.Entity<FuenteDatoCoreEntity>();
+        fuenteDato.ToTable("fuente_dato", "ref", tabla => tabla.ExcludeFromMigrations());
+        fuenteDato.HasKey(e => e.FuenteDatoId);
+        fuenteDato.Property(e => e.FuenteDatoId).HasColumnName("fuente_dato_id").HasColumnType("nvarchar(10)").HasMaxLength(10).IsUnicode();
+
+        var entidad = modelBuilder.Entity<FuenteExternaMapeoEntity>();
+        entidad.ToTable("fuente_externa_mapeo", "reglas", tabla =>
+        {
+            tabla.HasCheckConstraint("CK_fuente_externa_mapeo_nombre_blob", "LOWER(RIGHT([nombre_blob], 4)) = '.csv'");
+            tabla.HasCheckConstraint("CK_fuente_externa_mapeo_separador", "LEN([separador]) = 1");
+            tabla.HasCheckConstraint("CK_fuente_externa_mapeo_columnas", "[columna_clave] <> [columna_valor]");
+        });
+        entidad.HasKey(e => e.FuenteDatoId).HasName("PK_fuente_externa_mapeo");
+        entidad.Property(e => e.FuenteDatoId).HasColumnName("fuente_dato_id").HasColumnType("nvarchar(10)").HasMaxLength(10).IsUnicode();
+        entidad.Property(e => e.NombreBlob).HasColumnName("nombre_blob").HasColumnType("varchar(255)").HasMaxLength(255).IsUnicode(false).IsRequired();
+        entidad.Property(e => e.Separador).HasColumnName("separador").HasColumnType("varchar(1)").HasMaxLength(1).IsUnicode(false).IsRequired();
+        entidad.Property(e => e.ColumnaClave).HasColumnName("columna_clave").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false).IsRequired();
+        entidad.Property(e => e.ColumnaValor).HasColumnName("columna_valor").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false).IsRequired();
+        entidad.Property(e => e.CampoClaveContexto).HasColumnName("campo_clave_contexto").HasColumnType("varchar(150)").HasMaxLength(150).IsUnicode(false).IsRequired();
+        entidad.Property(e => e.CampoReglaId).HasColumnName("campo_regla_id").IsRequired();
+        entidad.Property(e => e.Activo).HasColumnName("activo").IsRequired();
+        entidad.Property(e => e.FechaCreacion).HasColumnName("fecha_creacion").HasColumnType("datetime2").IsRequired();
+        entidad.Property(e => e.UsuarioCreacion).HasColumnName("usuario_creacion").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false).IsRequired();
+        entidad.Property(e => e.FechaModificacion).HasColumnName("fecha_modificacion").HasColumnType("datetime2");
+        entidad.Property(e => e.UsuarioModificacion).HasColumnName("usuario_modificacion").HasColumnType("varchar(100)").HasMaxLength(100).IsUnicode(false);
+        entidad.HasOne(e => e.CampoRegla)
+            .WithMany()
+            .HasForeignKey(e => e.CampoReglaId)
+            .OnDelete(DeleteBehavior.NoAction)
+            .HasConstraintName("FK_fuente_externa_mapeo_campo_regla");
+        entidad.HasOne(e => e.FuenteDato)
+            .WithMany()
+            .HasForeignKey(e => e.FuenteDatoId)
+            .OnDelete(DeleteBehavior.NoAction)
+            .HasConstraintName("FK_fuente_externa_mapeo_fuente_dato");
     }
 
     private static void ConfigurarCampoRegla(ModelBuilder modelBuilder)

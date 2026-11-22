@@ -2,9 +2,11 @@ using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using RulesValidator.Application.Abstracciones;
+using RulesValidator.Application.Fuentes;
 using RulesValidator.Application.Observabilidad;
 using RulesValidator.Domain.Evaluaciones;
 using RulesValidator.Domain.Reglas;
+using RulesValidator.Domain.Reglas.Definiciones;
 
 namespace RulesValidator.Application.Evaluaciones;
 
@@ -13,6 +15,7 @@ public sealed class EvaluarReglasHandler(
     IRepositorioEjecucionesReglas repositorioEjecuciones,
     IRepositorioCatalogoCampos repositorioCatalogoCampos,
     ResolverParametrosRegla resolverParametros,
+    EnriquecedorContextoFuentes enriquecedorContexto,
     IValidadorDefinicionRegla validador,
     IMotorReglas motor,
     ILogger<EvaluarReglasHandler>? logger = null)
@@ -60,7 +63,7 @@ public sealed class EvaluarReglasHandler(
         // Todas las definiciones se validan antes de invocar al motor.
         var reglasPorEvaluar = await PrepararReglasAsync(flujos, camposPermitidos, fechaEvaluacion, cancellationToken);
 
-        var resultados = await motor.EvaluarAsync(reglasPorEvaluar, command.Contexto, camposPermitidos, cancellationToken);
+        var resultados = await EvaluarConFuentesAsync(reglasPorEvaluar, command.Contexto, camposPermitidos, cancellationToken);
         var resultadoGeneral = ConsolidadorResultadoGeneral.Consolidar(resultados);
         var codigosFlujos = flujos.Select(f => f.Codigo).ToList();
         var duracionMs = (long)Stopwatch.GetElapsedTime(inicio).TotalMilliseconds;
@@ -171,6 +174,92 @@ public sealed class EvaluarReglasHandler(
         }
 
         return reglasPorEvaluar;
+    }
+
+    // El enriquecimiento ocurre antes de que el motor valide los campos requeridos.
+    // Las reglas cuyo campo enriquecido no tiene valor se resuelven aquí con la causa de la fuente,
+    // para no perder el código funcional ni ejecutar una comparación con datos ausentes.
+    private async Task<IReadOnlyList<ResultadoEvaluacionRegla>> EvaluarConFuentesAsync(
+        IReadOnlyList<ReglaPorEvaluar> reglas,
+        JsonElement contexto,
+        IReadOnlyList<CampoReglaPermitido> camposPermitidos,
+        CancellationToken cancellationToken)
+    {
+        var camposReferenciados = reglas
+            .SelectMany(regla => CamposDefinicion.Campos(regla.Definicion))
+            .ToHashSet(StringComparer.Ordinal);
+
+        var enriquecido = await enriquecedorContexto.EnriquecerAsync(contexto, camposReferenciados, cancellationToken);
+
+        var resultados = new ResultadoEvaluacionRegla?[reglas.Count];
+        var reglasParaMotor = new List<ReglaPorEvaluar>();
+        var indicesMotor = new List<int>();
+
+        for (var indice = 0; indice < reglas.Count; indice++)
+        {
+            var causa = PrimeraCausaSinDato(reglas[indice].Definicion, enriquecido.CausasSinDato);
+            if (causa is null)
+            {
+                reglasParaMotor.Add(reglas[indice]);
+                indicesMotor.Add(indice);
+                continue;
+            }
+
+            resultados[indice] = CrearIndeterminadoPorFuente(reglas[indice], causa);
+        }
+
+        if (reglasParaMotor.Count > 0)
+        {
+            var resultadosMotor = await motor.EvaluarAsync(
+                reglasParaMotor,
+                enriquecido.Contexto,
+                camposPermitidos,
+                cancellationToken);
+
+            for (var posicion = 0; posicion < indicesMotor.Count; posicion++)
+            {
+                resultados[indicesMotor[posicion]] = resultadosMotor[posicion];
+            }
+        }
+
+        return resultados
+            .Select(resultado => resultado ?? throw new InvalidOperationException("No se produjo resultado para cada regla."))
+            .ToList();
+    }
+
+    private static string? PrimeraCausaSinDato(
+        DefinicionRegla definicion,
+        IReadOnlyDictionary<string, string> causas)
+    {
+        if (causas.Count == 0)
+        {
+            return null;
+        }
+
+        foreach (var campo in CamposDefinicion.Campos(definicion))
+        {
+            if (causas.TryGetValue(campo, out var causa))
+            {
+                return causa;
+            }
+        }
+
+        return null;
+    }
+
+    private static ResultadoEvaluacionRegla CrearIndeterminadoPorFuente(ReglaPorEvaluar regla, string causa)
+    {
+        var mensaje = causa == EnriquecedorContextoFuentes.CausaFuenteNoDisponible
+            ? $"La fuente externa no está disponible para evaluar {regla.CodigoRegla}."
+            : $"No existe información suficiente para evaluar {regla.CodigoRegla}.";
+
+        return new ResultadoEvaluacionRegla(
+            regla.CodigoRegla,
+            regla.Version,
+            EstadoEvaluacionRegla.Indeterminado,
+            regla.Severidad,
+            causa,
+            mensaje);
     }
 
     private static IReadOnlyList<string> ValidarTiposContexto(
